@@ -1,10 +1,10 @@
-# Active Context: Next.js Starter Template
+# Active Context: LabHouse Equipment Management App
 
 ## Current State
 
-**Template Status**: ✅ Ready for development
+**Application Status**: ✅ LabHouse Equipment Management System
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It's ready for AI-assisted expansion to build any type of application.
+The application is now a full-featured equipment management system with authentication, device tracking, calibration management, incident reporting, and more.
 
 ## Recently Completed
 
@@ -14,58 +14,45 @@ The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. I
 - [x] ESLint configuration
 - [x] Memory bank documentation
 - [x] Recipe system for common features
+- [x] **LabHouse Equipment source code integrated** from https://github.com/Labnotes123/LabHouse_Equipment
 
 ## Current Structure
 
 | File/Directory | Purpose | Status |
 |----------------|---------|--------|
-| `src/app/page.tsx` | Home page | ✅ Ready |
+| `src/app/page.tsx` | Home page with auth | ✅ Ready |
 | `src/app/layout.tsx` | Root layout | ✅ Ready |
 | `src/app/globals.css` | Global styles | ✅ Ready |
+| `src/app/api/` | API routes | ✅ Ready |
+| `src/components/` | UI components | ✅ Ready |
+| `src/contexts/` | Auth/Data/Toast contexts | ✅ Ready |
+| `src/lib/` | Utilities and mock data | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
 
-## Current Focus
+## LabHouse Equipment Features
 
-The template is ready. Next steps depend on user requirements:
-
-1. What type of application to build
-2. What features are needed
-3. Design/branding preferences
+The application now includes:
+- **Authentication** - Login/logout with role-based access
+- **Device Management** - Full CRUD for lab equipment
+- **Calibration Tracking** - Calibration requests and results
+- **Incident Reporting** - Report and track incidents
+- **User Management** - Admin user management
+- **Branches/Positions** - Organizational structure
+- **Suppliers** - Supplier management
+- **Proposals** - Equipment proposals workflow
+- **Schedules** - Scheduling system
+- **History** - Activity tracking
 
 ## Quick Start Guide
 
-### To add a new page:
-
-Create a file at `src/app/[route]/page.tsx`:
-```tsx
-export default function NewPage() {
-  return <div>New page content</div>;
-}
+### To run the development server:
+```bash
+bun dev
 ```
 
-### To add components:
-
-Create `src/components/` directory and add components:
-```tsx
-// src/components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
-  return <button className="px-4 py-2 bg-blue-600 text-white rounded">{children}</button>;
-}
-```
-
-### To add a database:
-
-Follow `.kilocode/recipes/add-database.md`
-
-### To add API routes:
-
-Create `src/app/api/[route]/route.ts`:
-```tsx
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
+### To build for production:
+```bash
+bun build
 ```
 
 ## Available Recipes
@@ -76,12 +63,13 @@ export async function GET() {
 
 ## Pending Improvements
 
-- [ ] Add more recipes (auth, email, etc.)
-- [ ] Add example components
-- [ ] Add testing setup recipe
+- [ ] Consider adding real database (currently uses mock data)
+- [ ] Add testing setup
+- [ ] Deploy to production
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
 | Initial | Template created with base setup |
+| Now | LabHouse Equipment Management integrated |

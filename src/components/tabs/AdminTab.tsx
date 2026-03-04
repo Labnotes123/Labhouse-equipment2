@@ -32,9 +32,13 @@ import {
   ChevronLeft,
   ChevronRight as ChevronRight2,
   RefreshCw,
+  Database,
+  Upload,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useData } from "@/contexts/DataContext";
 import { 
   mockUserProfiles, 
   mockProfiles, 
@@ -53,6 +57,18 @@ import {
   Position,
   Supplier
 } from "@/lib/mockData";
+import { 
+  createBackup, 
+  downloadBackup, 
+  validateBackupFile, 
+  formatFileSize, 
+  saveBackupConfig, 
+  loadBackupConfig, 
+  saveBackupHistory, 
+  loadBackupHistory,
+  type BackupMetadata,
+  type BackupData 
+} from "@/lib/backup-utils";
 
 type AdminSection = 
   | "users" 
@@ -61,7 +77,8 @@ type AdminSection =
   | "positions" 
   | "countries"
   | "suppliers"
-  | "history_config";
+  | "history_config"
+  | "backup";
 
 type UserColumn = "username" | "fullName" | "employeeId" | "phone" | "email" | "position" | "department" | "branch" | "profile" | "status";
 
@@ -73,6 +90,7 @@ const sections: { id: AdminSection; label: string; icon: React.ReactNode; color:
   { id: "countries", label: "Nước sản xuất", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
   { id: "suppliers", label: "Nhà cung cấp", icon: <Truck size={20} />, color: "from-pink-500 to-rose-600" },
   { id: "history_config", label: "Cấu hình lịch sử", icon: <History size={20} />, color: "from-slate-500 to-zinc-600" },
+  { id: "backup", label: "Sao lưu & Khôi phục", icon: <Database size={20} />, color: "from-emerald-500 to-teal-600" },
 ];
 
 const permissionCategories: { id: PermissionCategory; label: string }[] = [
@@ -99,6 +117,30 @@ export default function AdminTab() {
   const [showColumnConfig, setShowColumnConfig] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
+
+  // Initialize backup data from localStorage
+  useEffect(() => {
+    const config = loadBackupConfig();
+    if (config) {
+      setAutoBackupEnabled(config.autoBackupEnabled || false);
+      setAutoBackupFrequency(config.autoBackupFrequency || 'daily');
+      setAutoBackupTime(config.autoBackupTime || '02:00');
+      setMaxBackupsToKeep(config.maxBackupsToKeep || 10);
+    }
+    const history = loadBackupHistory();
+    setBackupHistory(history);
+  }, []);
+
+  // Backup section state
+  const [backupHistory, setBackupHistory] = useState<{id: string; createdAt: string; createdBy: string; size: number; recordCount: number}[]>([]);
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState(false);
+  const [autoBackupFrequency, setAutoBackupFrequency] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [autoBackupTime, setAutoBackupTime] = useState("02:00");
+  const [maxBackupsToKeep, setMaxBackupsToKeep] = useState(10);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [restoreConfirmChecked, setRestoreConfirmChecked] = useState(false);
+  const [pendingRestoreData, setPendingRestoreData] = useState<any>(null);
+  const [backupLoading, setBackupLoading] = useState(false);
   const [userPage, setUserPage] = useState(1);
   const usersPerPage = 20;
 
@@ -1723,6 +1765,398 @@ export default function AdminTab() {
     </div>
   );
 
+  // Backup Section
+  const renderBackupSection = () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { devices, schedules, incidents, proposals, calibrationRequests, calibrationResults } = useData();
+
+    // Handle create backup
+    const handleCreateBackup = async () => {
+      if (!user || !['Admin', 'Giám đốc'].includes(user.role)) {
+        error('Lỗi', 'Bạn không có quyền tạo bản sao lưu');
+        return;
+      }
+      
+      setBackupLoading(true);
+      try {
+        const data = {
+          devices: devices || [],
+          schedules: schedules || [],
+          incidents: incidents || [],
+          proposals: proposals || [],
+          calibrationRequests: calibrationRequests || [],
+          calibrationResults: calibrationResults || [],
+        };
+
+        const { blob, data: backupData } = await createBackup(data, user.fullName);
+        downloadBackup(blob);
+
+        // Save to history
+        const newBackup: BackupMetadata = {
+          id: `backup-${Date.now()}`,
+          createdAt: backupData.createdAt,
+          createdBy: backupData.createdBy,
+          size: blob.size,
+          recordCount: backupData.totalRecords,
+        };
+        const updatedHistory = [newBackup, ...backupHistory].slice(0, maxBackupsToKeep);
+        setBackupHistory(updatedHistory);
+        saveBackupHistory(updatedHistory);
+
+        success('Thành công', 'Đã tạo bản sao lưu và tải về máy');
+      } catch (err) {
+        console.error('Backup failed:', err);
+        error('Lỗi', 'Không thể tạo bản sao lưu');
+      } finally {
+        setBackupLoading(false);
+      }
+    };
+
+    // Handle file restore
+    const handleFileRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const result = await validateBackupFile(file);
+      if (!result.valid) {
+        error('Lỗi', result.error || 'File sao lưu không hợp lệ');
+        return;
+      }
+      setPendingRestoreData(result.data);
+      setShowRestoreConfirm(true);
+      event.target.value = '';
+    };
+
+    // Confirm restore
+    const confirmRestore = () => {
+      if (!pendingRestoreData) return;
+
+      try {
+        localStorage.setItem('labhouse_restore_data', JSON.stringify(pendingRestoreData));
+        success('Thành công', 'Dữ liệu đã được khôi phục. Trang sẽ được tải lại.');
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } catch (err) {
+        error('Lỗi', 'Không thể khôi phục dữ liệu');
+      }
+      setShowRestoreConfirm(false);
+      setPendingRestoreData(null);
+      setRestoreConfirmChecked(false);
+    };
+
+    // Delete backup from history
+    const handleDeleteBackup = (id: string) => {
+      const updated = backupHistory.filter(b => b.id !== id);
+      setBackupHistory(updated);
+      localStorage.setItem('backup_history', JSON.stringify(updated));
+      success('Thành công', 'Đã xóa bản sao lưu');
+    };
+
+    // Save auto backup config
+    const handleSaveConfig = () => {
+      const config = {
+        autoBackupEnabled,
+        autoBackupFrequency,
+        autoBackupTime,
+        maxBackupsToKeep,
+      };
+      localStorage.setItem('backup_config', JSON.stringify(config));
+      success('Thành công', 'Đã lưu cấu hình sao lưu tự động');
+    };
+
+    const formatSize = (bytes: number) => {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    };
+
+    const lastBackup = backupHistory[0];
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+            <Database size={20} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Sao lưu & Khôi phục dữ liệu</h2>
+            <p className="text-sm text-slate-500">Quản lý dữ liệu và sao lưu hệ thống</p>
+          </div>
+        </div>
+
+        {/* Backup and Restore Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Backup Card */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Save size={20} className="text-blue-600" />
+              </div>
+              <h3 className="font-bold text-slate-800">Sao lưu dữ liệu</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              Tạo bản sao lưu toàn bộ dữ liệu hiện tại và tải về máy
+            </p>
+
+            {lastBackup && (
+              <div className="text-sm text-slate-500 mb-4 p-3 bg-slate-50 rounded-lg">
+                <p>Bản sao lưu gần nhất:</p>
+                <p className="font-medium">{new Date(lastBackup.createdAt).toLocaleString('vi-VN')}</p>
+                <p className="text-xs">{lastBackup.recordCount.toLocaleString()} bản ghi • {formatSize(lastBackup.size)}</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleCreateBackup}
+              disabled={backupLoading}
+              className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {backupLoading ? (
+                <RefreshCw size={18} className="animate-spin" />
+              ) : (
+                <Database size={18} />
+              )}
+              {backupLoading ? 'Đang tạo...' : 'Tạo bản sao lưu ngay'}
+            </button>
+          </div>
+
+          {/* Restore Card */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <RotateCcw size={20} className="text-amber-600" />
+              </div>
+              <h3 className="font-bold text-slate-800">Khôi phục dữ liệu</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              Khôi phục dữ liệu từ file sao lưu (.json)
+            </p>
+
+            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center mb-4">
+              <Upload size={32} className="mx-auto text-slate-400 mb-2" />
+              <p className="text-sm text-slate-500 mb-3">Kéo thả file hoặc nhấp để chọn</p>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleFileRestore}
+                className="hidden"
+                id="restore-file"
+              />
+              <label
+                htmlFor="restore-file"
+                className="px-4 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm font-medium cursor-pointer hover:bg-amber-100"
+              >
+                Chọn file .json
+              </label>
+            </div>
+
+            <p className="text-xs text-red-500">
+              ⚠️ Lưu ý: Hành động này sẽ thay thế toàn bộ dữ liệu hiện tại
+            </p>
+          </div>
+        </div>
+
+        {/* Backup History */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              <History size={18} className="text-slate-600" />
+              Lịch sử sao lưu
+            </h3>
+          </div>
+
+          {backupHistory.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              <Database size={40} className="mx-auto mb-3 text-slate-300" />
+              <p>Chưa có bản sao lưu nào</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">STT</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Ngày tạo</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Người tạo</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Kích thước</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Số bản ghi</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {backupHistory.map((backup, index) => (
+                  <tr key={backup.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-sm text-slate-600">{index + 1}</td>
+                    <td className="px-6 py-4 text-sm text-slate-700 font-medium">
+                      {new Date(backup.createdAt).toLocaleString('vi-VN')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{backup.createdBy}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{formatSize(backup.size)}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{backup.recordCount.toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Tải về"
+                        >
+                          <Download size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBackup(backup.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Xóa"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Auto Backup Config */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-6">
+            <Settings size={18} className="text-slate-600" />
+            Cấu hình sao lưu tự động
+          </h3>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50">
+              <div>
+                <h4 className="font-semibold text-slate-700">Bật sao lưu tự động</h4>
+                <p className="text-sm text-slate-500 mt-1">Hệ thống sẽ tự động tạo bản sao lưu theo lịch cấu hình</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoBackupEnabled}
+                  onChange={(e) => setAutoBackupEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            {autoBackupEnabled && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Tần suất</label>
+                  <select
+                    value={autoBackupFrequency}
+                    onChange={(e) => setAutoBackupFrequency(e.target.value as any)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm"
+                  >
+                    <option value="daily">Hàng ngày</option>
+                    <option value="weekly">Hàng tuần</option>
+                    <option value="monthly">Hàng tháng</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Thời điểm</label>
+                  <select
+                    value={autoBackupTime}
+                    onChange={(e) => setAutoBackupTime(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm"
+                  >
+                    {[...Array(24)].map((_, i) => (
+                      <option key={i} value={`${String(i).padStart(2, '0')}:00`}>
+                        {String(i).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Số bản giữ lại</label>
+                  <select
+                    value={maxBackupsToKeep}
+                    onChange={(e) => setMaxBackupsToKeep(Number(e.target.value))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm"
+                  >
+                    {[5, 10, 15, 20, 30].map(n => (
+                      <option key={n} value={n}>{n} bản</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveConfig}
+              className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-medium hover:bg-slate-900 flex items-center gap-2"
+            >
+              <Save size={18} />
+              Lưu cấu hình
+            </button>
+          </div>
+        </div>
+
+        {/* Restore Confirmation Modal */}
+        {showRestoreConfirm && pendingRestoreData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <RotateCcw size={24} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Cảnh báo khôi phục dữ liệu</h3>
+                  <p className="text-sm text-slate-500">Hành động này không thể hoàn tác</p>
+                </div>
+              </div>
+
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                <p className="text-red-800 font-medium mb-2">⚠️ CẢNH BÁO!</p>
+                <p className="text-sm text-red-700">
+                  Hành động này sẽ <strong>THAY THẾ</strong> toàn bộ dữ liệu hiện tại bằng dữ liệu từ file sao lưu.
+                </p>
+                <div className="mt-3 text-sm text-red-600">
+                  <p>File: {pendingRestoreData.createdAt ? `labhouse_backup_${new Date(pendingRestoreData.createdAt).toISOString().split('T')[0]}.json` : 'unknown'}</p>
+                  <p>Ngày backup: {pendingRestoreData.createdAt ? new Date(pendingRestoreData.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</p>
+                  <p>Số bản ghi: {pendingRestoreData.totalRecords?.toLocaleString() || 'N/A'}</p>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-3 mb-6 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={restoreConfirmChecked}
+                  onChange={(e) => setRestoreConfirmChecked(e.target.checked)}
+                  className="mt-1 w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                />
+                <span className="text-sm text-slate-700">
+                  Tôi hiểu rủi ro và muốn tiếp tục khôi phục dữ liệu
+                </span>
+              </label>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowRestoreConfirm(false); setPendingRestoreData(null); setRestoreConfirmChecked(false); }}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-medium hover:bg-slate-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmRestore}
+                  disabled={!restoreConfirmChecked}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Khôi phục
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderHistoryConfigSection = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
@@ -1826,6 +2260,8 @@ export default function AdminTab() {
         return renderSuppliersSection();
       case "history_config":
         return renderHistoryConfigSection();
+      case "backup":
+        return renderBackupSection();
       default:
         return (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-slate-100">

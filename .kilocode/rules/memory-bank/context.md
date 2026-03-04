@@ -73,3 +73,4 @@ bun build
 |------|---------|
 | Initial | Template created with base setup |
 | Now | LabHouse Equipment Management integrated |
+| Recent | Database Backup & Restore feature implemented with JSON export/import, auto backup config, backup history, and 2FA-style restore confirmation |

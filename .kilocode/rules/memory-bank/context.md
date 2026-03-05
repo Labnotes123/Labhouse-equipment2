@@ -15,6 +15,13 @@ The application is now a full-featured equipment management system with authenti
 - [x] Memory bank documentation
 - [x] Recipe system for common features
 - [x] **LabHouse Equipment source code integrated** from https://github.com/Labnotes123/LabHouse_Equipment
+- [x] **Training Module implementation** - Complete 3-tab layout (Lên kế hoạch, Kho tài liệu, Chốt kết quả)
+  - Add TrainingPlan, TrainingDocument, TrainingResult, TrainingTrainee types
+  - Add users field to Device interface for tracking trained users
+  - Complete rewrite of TrainingModal with plan creation, document management, result recording
+  - Automation: auto-grant device permission to passed trainees
+  - Automation: auto-change device status from 'Chờ vận hành' to 'Đang vận hành'
+  - Fix TypeScript errors in multiple components
 
 ## Current Structure
 
@@ -34,6 +41,7 @@ The application is now a full-featured equipment management system with authenti
 The application now includes:
 - **Authentication** - Login/logout with role-based access
 - **Device Management** - Full CRUD for lab equipment
+- **Training Module** - Training plans, documents, and results with 3-tab layout
 - **Calibration Tracking** - Calibration requests and results
 - **Incident Reporting** - Report and track incidents
 - **User Management** - Admin user management
@@ -74,3 +82,4 @@ bun build
 | Initial | Template created with base setup |
 | Now | LabHouse Equipment Management integrated |
 | Recent | Database Backup & Restore feature implemented with JSON export/import, auto backup config, backup history, and 2FA-style restore confirmation |
+| Today | Training Module implemented with 3-tab layout, automation for device permissions and status changes |

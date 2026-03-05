@@ -1,6 +1,9 @@
 /**
  * PDF Export utility functions for LabHouse Equipment Management System
+ * Client-side only - uses browser APIs for PDF generation
  */
+
+"use client";
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";

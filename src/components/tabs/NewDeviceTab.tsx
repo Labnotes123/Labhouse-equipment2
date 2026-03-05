@@ -55,6 +55,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { MOCK_USERS_LIST, mockUserProfiles } from "@/lib/mockData";
 import { exportProposalToPDF } from "@/lib/pdf-export";
+import { exportProposalsToExcel } from "@/lib/excel-export";
 
 // Type alias for backward compatibility
 type Notification = SystemNotification;
@@ -589,9 +590,14 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
     setFormApprovers((prev) => prev.filter((a) => a.userId !== userId));
   };
 
-  // Export Excel (mock)
+  // Export Excel with all proposals data
   const handleExportExcel = () => {
-    info("Xuất Excel", "Đang xuất file Excel...");
+    try {
+      exportProposalsToExcel(proposals);
+      info("Xuất Excel", `Đã xuất ${proposals.length} phiếu đề xuất thành công`);
+    } catch (err) {
+      error("Lỗi khi xuất Excel");
+    }
   };
 
   // Export PDF with full proposal details and attachments list

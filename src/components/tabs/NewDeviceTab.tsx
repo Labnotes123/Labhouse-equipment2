@@ -40,7 +40,7 @@ import {
   DeviceRequirement,
   ProposalApprover,
   AttachedFile,
-  Notification,
+  SystemNotification,
   formatDate,
   generatePDXCode,
   deviceTypes,
@@ -53,7 +53,10 @@ import {
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
-import { MOCK_USERS_LIST } from "@/lib/mockData";
+import { MOCK_USERS_LIST, mockUserProfiles } from "@/lib/mockData";
+
+// Type alias for backward compatibility
+type Notification = SystemNotification;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -375,16 +378,19 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       addProposal(proposal).catch(console.error);
     }
     // Add notifications
-    const newNotifs: Notification[] = formApprovers.map((a) => ({
+    const newNotifs: SystemNotification[] = formApprovers.map((a) => ({
       id: `n-${Date.now()}-${a.userId}`,
       userId: a.userId,
-      type: a.isApprover ? "proposal_pending" : "proposal_related",
+      recipientId: a.userId,
+      recipientName: a.fullName,
+      priority: a.isApprover ? "high" : "medium",
+      type: a.isApprover ? "approval_request" : "system",
       title: a.isApprover ? "Yêu cầu phê duyệt mới" : "Bạn được liệt kê là người liên quan",
       message: a.isApprover
         ? `Phiếu đề xuất ${proposal.proposalCode} cần được phê duyệt`
         : `Phiếu đề xuất ${proposal.proposalCode} - Bạn được liệt kê là người liên quan`,
-      proposalId: proposal.id,
-      proposalCode: proposal.proposalCode,
+      relatedId: proposal.id,
+      relatedCode: proposal.proposalCode,
       isRead: false,
       createdAt: new Date().toISOString(),
     }));
@@ -404,14 +410,18 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
     );
     updateProposal(p.id, updates).catch(console.error);
     // Notify proposer
-    const notif: Notification = {
+    const proposer = mockUserProfiles.find(u => u.id === p.proposedById);
+    const notif: SystemNotification = {
       id: `n-${Date.now()}`,
       userId: p.proposedById,
-      type: "proposal_approved",
+      recipientId: p.proposedById,
+      recipientName: proposer?.fullName || "",
+      priority: "medium",
+      type: "approval_approved",
       title: "Đề xuất đã được phê duyệt",
       message: `Phiếu đề xuất ${p.proposalCode} đã được phê duyệt bởi ${user?.fullName}`,
-      proposalId: p.id,
-      proposalCode: p.proposalCode,
+      relatedId: p.id,
+      relatedCode: p.proposalCode,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
@@ -428,14 +438,18 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       prev.map((pr) => pr.id === rejectProposal.id ? { ...pr, ...updates } : pr)
     );
     updateProposal(rejectProposal.id, updates).catch(console.error);
-    const notif: Notification = {
+    const proposer = mockUserProfiles.find(u => u.id === rejectProposal.proposedById);
+    const notif: SystemNotification = {
       id: `n-${Date.now()}`,
       userId: rejectProposal.proposedById,
-      type: "proposal_rejected",
+      recipientId: rejectProposal.proposedById,
+      recipientName: proposer?.fullName || "",
+      priority: "high",
+      type: "approval_rejected",
       title: "Đề xuất bị từ chối",
       message: `Phiếu đề xuất ${rejectProposal.proposalCode} đã bị từ chối. Lý do: ${rejectReason}`,
-      proposalId: rejectProposal.id,
-      proposalCode: rejectProposal.proposalCode,
+      relatedId: rejectProposal.id,
+      relatedCode: rejectProposal.proposalCode,
       isRead: false,
       createdAt: new Date().toISOString(),
     };

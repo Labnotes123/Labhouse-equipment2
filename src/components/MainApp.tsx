@@ -26,6 +26,7 @@ import DeviceProfileTab from "@/components/tabs/DeviceProfileTab";
 import AdminTab from "@/components/tabs/AdminTab";
 import HistoryTab from "@/components/tabs/HistoryTab";
 import { useData } from "@/contexts/DataContext";
+import NotificationUI from "@/components/NotificationUI";
 
 type TabId = "dashboard" | "new-device" | "device-profile" | "admin" | "history";
 type NewDeviceFilter = "all" | "pending";
@@ -236,14 +237,7 @@ export default function MainApp() {
           {/* Right: Notifications + User */}
           <div className="flex items-center gap-3">
             {/* Notification Bell */}
-            <button className="relative w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
-              <Bell size={18} className="text-slate-600" />
-              {pendingCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
+            <NotificationUI />
 
             {/* User Menu */}
             <div className="relative">

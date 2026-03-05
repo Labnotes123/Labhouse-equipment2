@@ -299,6 +299,54 @@ export interface HistoryLog {
   ipAddress?: string;
 }
 
+// ============ NOTIFICATION TYPES ============
+
+export type NotificationType = 
+  | "approval_request"      // Yêu cầu duyệt
+  | "approval_approved"    // Đã duyệt
+  | "approval_rejected"    // Từ chối
+  | "training"             // Thông báo đào tạo
+  | "calibration"          // Thông báo hiệu chuẩn
+  | "incident"             // Thông báo sự cố
+  | "maintenance"          // Thông báo bảo trì
+  | "system";              // Thông báo hệ thống
+
+export type NotificationPriority = "low" | "medium" | "high" | "urgent";
+
+export interface SystemNotification {
+  id: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  title: string;
+  message: string;
+  // Người nhận thông báo
+  recipientId: string;
+  recipientName: string;
+  // Legacy: userId for backward compatibility
+  userId?: string;
+  // Người tạo thông báo (có thể là hệ thống)
+  senderId?: string;
+  senderName?: string;
+  // Liên kết đến đối tượng liên quan
+  relatedType?: "proposal" | "incident" | "calibration" | "device" | "training" | "user";
+  relatedId?: string;
+  relatedCode?: string; // Mã phiếu/đề xuất
+  // Legacy: proposalId and proposalCode for backward compatibility
+  proposalId?: string;
+  proposalCode?: string;
+  // Trạng thái
+  isRead: boolean;
+  readAt?: string;
+  // Thời gian
+  createdAt: string;
+  // Hành động (nếu có)
+  actionUrl?: string;
+  actionLabel?: string;
+}
+
+// Alias for backward compatibility
+export type Notification = SystemNotification;
+
 export interface DeviceContact {
   id: string;
   fullName: string;
@@ -360,19 +408,6 @@ export interface Device {
   nextMaintenance?: string;
   // Additional
   description?: string;
-}
-
-// Notification type
-export interface Notification {
-  id: string;
-  userId: string;
-  type: "proposal_pending" | "proposal_approved" | "proposal_rejected" | "proposal_related";
-  title: string;
-  message: string;
-  proposalId: string;
-  proposalCode: string;
-  isRead: boolean;
-  createdAt: string;
 }
 
 // Mock Devices - Updated format with all fields
@@ -698,42 +733,9 @@ export const mockProposals: NewDeviceProposal[] = [
   },
 ];
 
-// Mock Notifications
-export const mockNotifications: Notification[] = [
-  {
-    id: "n1",
-    userId: "2",
-    type: "proposal_pending",
-    title: "Yêu cầu phê duyệt mới",
-    message: "Phiếu đề xuất PDX-2024-001 cần được phê duyệt",
-    proposalId: "p1",
-    proposalCode: "PDX-2024-001",
-    isRead: false,
-    createdAt: "2024-02-15T08:00:00",
-  },
-  {
-    id: "n2",
-    userId: "3",
-    type: "proposal_related",
-    title: "Bạn được liệt kê là người liên quan",
-    message: "Phiếu đề xuất PDX-2024-001 - Bạn được liệt kê là người liên quan",
-    proposalId: "p1",
-    proposalCode: "PDX-2024-001",
-    isRead: false,
-    createdAt: "2024-02-15T08:00:00",
-  },
-  {
-    id: "n3",
-    userId: "3",
-    type: "proposal_pending",
-    title: "Yêu cầu phê duyệt mới",
-    message: "Phiếu đề xuất PDX-2024-003 cần được phê duyệt",
-    proposalId: "p3",
-    proposalCode: "PDX-2024-003",
-    isRead: false,
-    createdAt: "2024-03-01T09:00:00",
-  },
-];
+// Legacy Mock Notifications (for backward compatibility with components using old format)
+// Using userId instead of recipientId for compatibility
+export const mockNotifications: SystemNotification[] = [];
 
 // Mock Calibration Schedules
 export const mockSchedules: CalibrationSchedule[] = [
@@ -1735,7 +1737,7 @@ export const mockUserProfiles: UserProfile[] = [
     fullName: "Nguyễn Văn Admin",
     employeeId: "NV-001",
     phone: "0912345678",
-    email: "admin@labhouse.vn",
+    email: "levancong.hmtu@gmail.com",
     position: "Quản trị viên",
     department: "IT",
     branch: "LabHouse Central",
@@ -1752,7 +1754,7 @@ export const mockUserProfiles: UserProfile[] = [
     fullName: "Trần Thị Giám Đốc",
     employeeId: "NV-002",
     phone: "0912345679",
-    email: "giamdoc@labhouse.vn",
+    email: "cong.le@gmail.com",
     position: "Giám đốc",
     department: "Ban Giám đốc",
     branch: "LabHouse Central",

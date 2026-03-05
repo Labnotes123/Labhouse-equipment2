@@ -15,7 +15,7 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import { MOCK_USERS_LIST, HistoryLog, formatDateTime } from "@/lib/mockData";
+import { MOCK_USERS_LIST, HistoryLog, formatDateTime, mockHistoryLogs } from "@/lib/mockData";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -81,9 +81,35 @@ function calculateDateRange(timeRange: TimeRange, dateFrom: string, dateTo: stri
 
 export default function HistoryTab() {
   const { user } = useAuth();
-  const { history: mockHistoryLogs, devices: mockDevices } = useData();
+  const { history: contextHistory, devices: mockDevices } = useData();
   const [logs, setLogs] = useState<HistoryLog[]>([]);
-  useEffect(() => { setLogs(mockHistoryLogs); }, [mockHistoryLogs]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Load history data - either from context or fallback to mock
+  useEffect(() => {
+    const loadHistory = async () => {
+      setIsLoading(true);
+      try {
+        // Try to fetch from API
+        const res = await fetch('/api/history?limit=500');
+        if (res.ok) {
+          const data = await res.json();
+          setLogs(data);
+        } else {
+          // Fallback to context data or mock
+          setLogs(contextHistory.length > 0 ? contextHistory : mockHistoryLogs);
+        }
+      } catch (e) {
+        console.log('Using fallback history data');
+        // Fallback to context data or mock
+        setLogs(contextHistory.length > 0 ? contextHistory : mockHistoryLogs);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadHistory();
+  }, [contextHistory]);
   
   // Filters
   const [timeRange, setTimeRange] = useState<TimeRange>("week");

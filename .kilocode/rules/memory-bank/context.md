@@ -43,7 +43,14 @@ The application is now a full-featured equipment management system with authenti
   - Update approve/reject handlers to also send notifications via API
 - [x] **History Tab Fix** - Fixed to load data from API properly with fallback to mock data
 - [x] **Admin Tab Enhancements** - Fixed history config save to localStorage, backup now includes all data types (users, branches, positions, suppliers), restore loads from localStorage on app mount
-- [x] **History Logging** - Added addHistory calls to NewDeviceTab and DashboardTab to automatically log user actions (send proposal, approve, reject) to the history system
+- [x] **History Logging** - Added addHistory calls to multiple tabs to automatically log user actions:
+  - NewDeviceTab: gửi đề xuất, phê duyệt, từ chối
+  - DashboardTab: phê duyệt/từ chối thiết bị mới, sự cố, hiệu chuẩn, bảo dưỡng
+  - IncidentReportTab: phê duyệt, hoàn thành sửa chữa, cập nhật phiếu báo cáo sự cố
+  - CalibrationTab: phê duyệt yêu cầu hiệu chuẩn
+  - TrainingModal: gửi phê duyệt, phê duyệt, ghi nhận kết quả đào tạo
+  - AdminTab: tạo, cập nhật, xóa người dùng
+- [x] **HistoryLog TypeScript Fixes** - Added new targetTypes (Hiệu chuẩn, Đào tạo, Bảo dưỡng, Thanh lý, Điều chuyển)
 
 ## Current Structure
 

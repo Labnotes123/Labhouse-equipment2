@@ -35,6 +35,12 @@ The application is now a full-featured equipment management system with authenti
   - Add /api/emails route for manual email sending
   - Auto-send emails when notifications are created (if SMTP configured)
   - Add .env.example with SMTP configuration (gitignored)
+- [x] **Email Fix** - Fixed notification email sending issue
+  - Add recipientEmail field to SystemNotification interface
+  - Add email field to ProposalApprover interface
+  - Add email to MOCK_USERS_LIST with proper emails for director (cong.le@roche.com)
+  - Update NewDeviceTab to send notifications via API (which triggers email sending)
+  - Update approve/reject handlers to also send notifications via API
 
 ## Current Structure
 

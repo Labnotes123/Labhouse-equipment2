@@ -19,8 +19,9 @@ import {
   Wrench,
   ClipboardList,
   ArrowUpRight,
+  GraduationCap,
 } from "lucide-react";
-import { formatDate, mockTransferProposals, mockLiquidationProposals } from "@/lib/mockData";
+import { formatDate, mockTransferProposals, mockLiquidationProposals, TrainingPlan } from "@/lib/mockData";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,7 +31,7 @@ interface UnifiedApprovalItem {
   id: string;
   code: string;
   name: string;
-  type: "TB_Mới" | "Sự_cố" | "Hiệu_chuẩn" | "Bảo_dưỡng" | "Điều_chuyển" | "Thanh_lý";
+  type: "TB_Mới" | "Sự_cố" | "Hiệu_chuẩn" | "Bảo_dưỡng" | "Điều_chuyển" | "Thanh_lý" | "Đào_tạo";
   requester: string;
   requestDate: string;
   status: "Chờ_phê_duyệt";
@@ -45,14 +46,16 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
     incidents: mockIncidents, 
     schedules: mockSchedules, 
     devices: mockDevices,
+    trainingPlans,
     updateProposal,
     updateIncident,
     updateSchedule,
+    updateTrainingPlan,
     addHistory,
   } = useData();
   
-  const [activeFilter, setActiveFilter] = useState<"all" | "TB_Mới" | "Sự_cố" | "Hiệu_chuẩn" | "Điều_chuyển" | "Thanh_lý">("all");
-  const [activeTab, setActiveTab] = useState<0 | 1 | 2 | 3>(0);
+  const [activeFilter, setActiveFilter] = useState<"all" | "TB_Mới" | "Sự_cố" | "Hiệu_chuẩn" | "Điều_chuyển" | "Thanh_lý" | "Đào_tạo">("all");
+  const [activeTab, setActiveTab] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,6 +75,9 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
   const pendingIncidents = mockIncidents.filter((i) => i.status === "Chờ duyệt");
   const pendingCalibration = mockSchedules.filter((s) => s.type === "Hiệu chuẩn" && s.status === "Chờ thực hiện");
   const pendingMaintenance = mockSchedules.filter((s) => s.type === "Bảo dưỡng" && s.status === "Chờ thực hiện");
+  
+  // Get pending training plans
+  const pendingTraining = trainingPlans.filter((p) => p.status === "Chờ duyệt");
 
   // Build unified approval list
   const unifiedApprovals: UnifiedApprovalItem[] = useMemo(() => {
@@ -165,8 +171,22 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
       }
     });
     
+    // Add pending training plans
+    pendingTraining.forEach((t) => {
+      items.push({
+        id: t.id,
+        code: t.planCode,
+        name: t.topic,
+        type: "Đào_tạo",
+        requester: t.createdBy,
+        requestDate: t.createdAt,
+        status: "Chờ_phê_duyệt",
+        data: t as unknown as Record<string, unknown>,
+      });
+    });
+    
     return items;
-  }, [pendingProposals, pendingIncidents, pendingCalibration, pendingMaintenance]);
+  }, [pendingProposals, pendingIncidents, pendingCalibration, pendingMaintenance, pendingTraining]);
 
   // Filter approvals
   const filteredApprovals = useMemo(() => {
@@ -232,6 +252,13 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
       color: "from-emerald-500 to-green-500",
       filter: "Điều_chuyển" as const,
     },
+    {
+      label: "Đào tạo chờ duyệt",
+      value: pendingTraining.length,
+      icon: <GraduationCap size={22} />,
+      color: "from-violet-500 to-purple-600",
+      filter: "Đào_tạo" as const,
+    },
   ];
 
   // Type badge config
@@ -242,6 +269,7 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
     "Bảo_dưỡng": { bg: "bg-cyan-100", text: "text-cyan-700", label: "Bảo dưỡng" },
     "Điều_chuyển": { bg: "bg-amber-100", text: "text-amber-700", label: "Điều chuyển" },
     "Thanh_lý": { bg: "bg-slate-100", text: "text-slate-700", label: "Thanh lý" },
+    "Đào_tạo": { bg: "bg-violet-100", text: "text-violet-700", label: "Đào tạo" },
   };
 
   // Tab config for monitoring section
@@ -250,6 +278,7 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
     { label: "Lịch Bảo dưỡng định kỳ", icon: <Wrench size={16} /> },
     { label: "Danh sách Báo cáo sự cố", icon: <AlertTriangle size={16} /> },
     { label: "Danh sách Công việc Kỹ sư", icon: <ClipboardList size={16} /> },
+    { label: "Lịch Đào tạo sắp tới", icon: <GraduationCap size={16} /> },
   ];
 
   // Handlers
@@ -269,6 +298,11 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
         await updateSchedule(item.id, { 
           status: "Đã hoàn thành" 
         });
+      } else if (item.type === "Đào_tạo") {
+        await updateTrainingPlan(item.id, { 
+          status: "Đã duyệt",
+          updatedAt: new Date().toISOString()
+        });
       }
       // Add history log
       const actionMap: Record<string, string> = {
@@ -276,6 +310,7 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
         "Sự_cố": "Phê duyệt báo cáo sự cố",
         "Hiệu_chuẩn": "Phê duyệt yêu cầu hiệu chuẩn",
         "Bảo_dưỡng": "Phê duyệt yêu cầu bảo dưỡng",
+        "Đào_tạo": "Phê duyệt kế hoạch đào tạo",
       };
       await addHistory({
         actionCode: `ACT-${String(Date.now()).slice(-6)}`,
@@ -285,7 +320,7 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
         userRole: user?.role || "",
         action: actionMap[item.type] || "Phê duyệt",
         description: `${actionMap[item.type] || "Phê duyệt"} ${item.code}`,
-        targetType: item.type === "TB_Mới" ? "Đề xuất" : item.type === "Sự_cố" ? "Sự cố" : "Lịch",
+        targetType: item.type === "TB_Mới" ? "Đề xuất" : item.type === "Sự_cố" ? "Sự cố" : item.type === "Đào_tạo" ? "Đào tạo" : "Lịch",
         targetId: item.id,
         targetName: item.code,
         timestamp: new Date().toISOString(),
@@ -638,7 +673,7 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
             {tabConfig.map((tab, i) => (
               <button
                 key={i}
-                onClick={() => setActiveTab(i as 0 | 1 | 2 | 3)}
+                onClick={() => setActiveTab(i as 0 | 1 | 2 | 3 | 4)}
                 className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all relative ${
                   activeTab === i
                     ? "text-slate-800"
@@ -936,6 +971,89 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
                       <tr>
                         <td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">
                           Chưa có công việc kỹ sư nào. Các công việc sẽ xuất hiện khi có sự cố được tạo.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 4: Lịch Đào tạo sắp tới */}
+          {activeTab === 4 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">Kế hoạch đào tạo thiết bị sắp diễn ra</p>
+                <div className="flex gap-2">
+                  <button className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200">
+                    <Settings size={16} className="text-slate-600" />
+                  </button>
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium">
+                    <Download size={14} />
+                    Xuất Excel
+                  </button>
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mã kế hoạch</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Thiết bị</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Chủ đề</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Ngày đào tạo</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Giảng viên</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Địa điểm</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Trạng thái</th>
+                      <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 uppercase">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {trainingPlans.filter(p => p.status === "Đã duyệt" || p.status === "Chờ duyệt").length > 0 ? (
+                      trainingPlans
+                        .filter(p => p.status === "Đã duyệt" || p.status === "Chờ duyệt")
+                        .slice(0, 10)
+                        .map((plan) => (
+                          <tr key={plan.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 text-sm font-medium text-slate-700">{plan.planCode}</td>
+                            <td className="px-4 py-3 text-sm text-slate-700">{plan.deviceName}</td>
+                            <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{plan.topic}</td>
+                            <td className="px-4 py-3 text-sm text-slate-500">{formatDate(plan.trainingDate)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-500">{plan.instructorName}</td>
+                            <td className="px-4 py-3 text-sm text-slate-500">{plan.location}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                plan.status === "Đã duyệt" ? "bg-emerald-100 text-emerald-700" :
+                                plan.status === "Chờ duyệt" ? "bg-amber-100 text-amber-700" :
+                                plan.status === "Hoàn thành" ? "bg-blue-100 text-blue-700" :
+                                "bg-slate-100 text-slate-700"
+                              }`}>
+                                {plan.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-2">
+                                <button className="p-1.5 rounded bg-slate-100 hover:bg-slate-200" title="Xem chi tiết">
+                                  <Eye size={14} className="text-slate-600" />
+                                </button>
+                                <button className="p-1.5 rounded bg-blue-100 hover:bg-blue-200" title="Danh sách học viên">
+                                  <ClipboardList size={14} className="text-blue-600" />
+                                </button>
+                                {plan.status === "Đã duyệt" && (
+                                  <button className="p-1.5 rounded bg-purple-100 hover:bg-purple-200" title="Ghi nhận kết quả">
+                                    <FileText size={14} className="text-purple-600" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">
+                          Chưa có kế hoạch đào tạo nào. Các kế hoạch sẽ xuất hiện khi được tạo từ hồ sơ thiết bị.
                         </td>
                       </tr>
                     )}

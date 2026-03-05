@@ -9,6 +9,9 @@ import type {
   CalibrationRequest,
   CalibrationResult,
   HistoryLog,
+  TrainingPlan,
+  TrainingDocument,
+  TrainingResult,
 } from "@/lib/mockData";
 
 interface DataContextValue {
@@ -20,6 +23,9 @@ interface DataContextValue {
   calibrationRequests: CalibrationRequest[];
   calibrationResults: CalibrationResult[];
   history: HistoryLog[];
+  trainingPlans: TrainingPlan[];
+  trainingDocuments: TrainingDocument[];
+  trainingResults: TrainingResult[];
 
   // Loading states
   loading: boolean;
@@ -30,6 +36,7 @@ interface DataContextValue {
   calibrationRequestsLoading: boolean;
   calibrationResultsLoading: boolean;
   historyLoading: boolean;
+  trainingLoading: boolean;
 
   // Refresh
   refreshData: () => Promise<void>;
@@ -66,6 +73,9 @@ interface DataContextValue {
 
   // History mutations
   addHistory: (log: Record<string, any>) => Promise<void>;
+
+  // Training mutations
+  updateTrainingPlan: (id: string, updates: Partial<TrainingPlan>) => Promise<TrainingPlan>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -87,6 +97,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [calibrationRequests, setCalibrationRequests] = useState<CalibrationRequest[]>([]);
   const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]>([]);
   const [history, setHistory] = useState<HistoryLog[]>([]);
+  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>([]);
+  const [trainingDocuments, setTrainingDocuments] = useState<TrainingDocument[]>([]);
+  const [trainingResults, setTrainingResults] = useState<TrainingResult[]>([]);
 
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(true);
@@ -95,6 +108,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [calibrationRequestsLoading, setCalibrationRequestsLoading] = useState(true);
   const [calibrationResultsLoading, setCalibrationResultsLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [trainingLoading, setTrainingLoading] = useState(true);
 
   const fetchDevices = useCallback(async () => {
     setDevicesLoading(true);
@@ -180,6 +194,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const fetchTrainingData = useCallback(async () => {
+    setTrainingLoading(true);
+    try {
+      // Load training data from localStorage or use mock data
+      const storedPlans = localStorage.getItem('labhouse_training_plans');
+      if (storedPlans) {
+        setTrainingPlans(JSON.parse(storedPlans));
+      } else {
+        const { mockTrainingPlans, mockTrainingDocuments, mockTrainingResults } = await import("@/lib/mockData");
+        setTrainingPlans(mockTrainingPlans);
+        setTrainingDocuments(mockTrainingDocuments);
+        setTrainingResults(mockTrainingResults || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch training data", e);
+    } finally {
+      setTrainingLoading(false);
+    }
+  }, []);
+
   const refreshData = useCallback(async () => {
     await Promise.all([
       fetchDevices(),
@@ -189,8 +223,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       fetchCalibrationRequests(),
       fetchCalibrationResults(),
       fetchHistory(),
+      fetchTrainingData(),
     ]);
-  }, [fetchDevices, fetchProposals, fetchIncidents, fetchSchedules, fetchCalibrationRequests, fetchCalibrationResults, fetchHistory]);
+  }, [fetchDevices, fetchProposals, fetchIncidents, fetchSchedules, fetchCalibrationRequests, fetchCalibrationResults, fetchHistory, fetchTrainingData]);
 
   useEffect(() => {
     refreshData();
@@ -387,6 +422,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Training mutations
+  const updateTrainingPlan = useCallback(async (id: string, updates: Partial<TrainingPlan>) => {
+    setTrainingPlans(prev => {
+      const updated = prev.map(p => p.id === id ? { ...p, ...updates } : p);
+      localStorage.setItem('labhouse_training_plans', JSON.stringify(updated));
+      return updated;
+    });
+    return { id, ...updates } as TrainingPlan;
+  }, []);
+
   return (
     <DataContext.Provider
       value={{
@@ -397,6 +442,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         calibrationRequests,
         calibrationResults,
         history,
+        trainingPlans,
+        trainingDocuments,
+        trainingResults,
         loading,
         devicesLoading,
         proposalsLoading,
@@ -405,6 +453,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         calibrationRequestsLoading,
         calibrationResultsLoading,
         historyLoading,
+        trainingLoading,
         refreshData,
         addDevice,
         updateDevice,
@@ -425,6 +474,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateCalibrationResult,
         deleteCalibrationResult,
         addHistory,
+        updateTrainingPlan,
       }}
     >
       {children}

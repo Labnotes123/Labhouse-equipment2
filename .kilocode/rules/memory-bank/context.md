@@ -22,6 +22,14 @@ The application is now a full-featured equipment management system with authenti
   - Automation: auto-grant device permission to passed trainees
   - Automation: auto-change device status from 'Chờ vận hành' to 'Đang vận hành'
   - Fix TypeScript errors in multiple components
+- [x] **Notification System** - Complete notification infrastructure
+  - Add SystemNotification type with recipientId, priority, relatedType
+  - Create /api/notifications route with CRUD operations
+  - Create NotificationContext for state management
+  - Add NotificationUI component with bell icon and dropdown
+  - Update NotificationService with templates for approval requests/results
+  - Integrate notifications into NewDeviceTab approval workflow
+  - Update user emails: admin = levancong.hmtu@gmail.com, director = cong.le@gmail.com
 
 ## Current Structure
 
@@ -48,6 +56,8 @@ The application now includes:
 - **Branches/Positions** - Organizational structure
 - **Suppliers** - Supplier management
 - **Proposals** - Equipment proposals workflow
+- **Notification System** - Bell icon, dropdown notifications, approval workflow notifications
+- **Email Integration** - User emails configured for admin and director
 - **Schedules** - Scheduling system
 - **History** - Activity tracking
 

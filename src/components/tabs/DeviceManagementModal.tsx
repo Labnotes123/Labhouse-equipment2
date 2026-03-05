@@ -209,15 +209,122 @@ export default function DeviceManagementModal({
     });
   };
 
-  // Handle download label as PDF (simplified)
-  const handleDownloadPDF = () => {
-    // For now, show alert - in production would generate actual PDF
-    alert(`Tải ${labelQuantity} tem nhãn thiết bị ${d.code}`);
+  // Handle download label as PDF
+  const handleDownloadPDF = async () => {
+    if (!d) return;
+    
+    try {
+      // Dynamic import for client-side only
+      const { jsPDF } = await import("jspdf");
+      
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Title
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("NHÃN THIẾT BỊ", pageWidth / 2, 20, { align: "center" });
+      
+      // Device info
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Mã thiết bị: ${d.code}`, 20, 35);
+      doc.text(`Tên thiết bị: ${d.name}`, 20, 42);
+      doc.text(`Model: ${d.model || "-"}`, 20, 49);
+      doc.text(`Serial: ${d.serial || "-"}`, 20, 56);
+      
+      // QR Code
+      const qrDataUrl = await QRCode.toDataURL(`${typeof window !== "undefined" ? window.location.origin : ""}/incident-report?device=${d.code}`);
+      doc.addImage(qrDataUrl, "PNG", pageWidth / 2 - 25, 65, 50, 50);
+      doc.text("Quét QR để báo cáo sự cố", pageWidth / 2, 120, { align: "center" });
+      
+      // Labels
+      doc.setFontSize(10);
+      doc.text(`Số lượng tem: ${labelQuantity}`, 20, 135);
+      doc.text(`Ngày in: ${new Date().toLocaleDateString("vi-VN")}`, 20, 142);
+      
+      doc.save(`Nhan_${d.code}.pdf`);
+    } catch (err) {
+      console.error("PDF Error:", err);
+      alert("Lỗi khi tạo PDF: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   };
 
   // Handle print
   const handlePrint = () => {
     window.print();
+  };
+
+  // CSV download helper function
+  const downloadCsvFile = (filename: string, headers: string[], rows: string[][], successMessage: string) => {
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${String(cell || "").replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    alert(successMessage);
+  };
+
+  // Export manager history to Excel
+  const handleExportManagerHistoryExcel = () => {
+    if (!d.managerHistory || d.managerHistory.length === 0) {
+      alert("Không có dữ liệu lịch sử người quản lý");
+      return;
+    }
+    
+    const headers = ["Mã NV", "Họ tên", "Chi nhánh & Bộ phận", "Chức vụ", "SĐT", "Email", "Ngày bắt đầu", "Ngày kết thúc", "Trạng thái"];
+    const rows = d.managerHistory.map((mgr) => [
+      mgr.userId,
+      mgr.fullName,
+      "-",
+      "-",
+      "-",
+      "-",
+      formatDate(mgr.startDate || ""),
+      formatDate(mgr.endDate || ""),
+      mgr.isCurrent ? "Hiện tại" : "Đã kết thúc",
+    ]);
+    
+    downloadCsvFile(
+      `Lich_Su_Quan_Ly_${d.code}.csv`,
+      headers,
+      rows,
+      `Đã xuất lịch sử quản lý thiết bị ${d.code}`
+    );
+  };
+
+  // Export contacts to Excel
+  const handleExportContactsExcel = () => {
+    if (!d.contacts || d.contacts.length === 0) {
+      alert("Không có dữ liệu người liên hệ");
+      return;
+    }
+    
+    const headers = ["Họ tên", "SĐT", "Email", "Công ty", "Trạng thái"];
+    const rows = d.contacts.map((contact) => [
+      contact.fullName,
+      contact.phone || "-",
+      contact.email || "-",
+      d.distributor || "-",
+      "Liên hệ hiện tại",
+    ]);
+    
+    downloadCsvFile(
+      `Danh_Sach_Lien_He_${d.code}.csv`,
+      headers,
+      rows,
+      `Đã xuất danh sách liên hệ thiết bị ${d.code}`
+    );
   };
 
   if (!isOpen) return null;
@@ -572,7 +679,7 @@ export default function DeviceManagementModal({
                     <button className="p-2 hover:bg-slate-100 rounded-lg" title="Cấu hình cột">
                       <GripVertical size={18} className="text-slate-500" />
                     </button>
-                    <button className="p-2 hover:bg-slate-100 rounded-lg flex items-center gap-1 text-sm">
+                    <button onClick={handleExportManagerHistoryExcel} className="p-2 hover:bg-slate-100 rounded-lg flex items-center gap-1 text-sm">
                       <FileSpreadsheet size={18} className="text-green-600" />
                       Xuất Excel
                     </button>
@@ -723,7 +830,7 @@ export default function DeviceManagementModal({
                     <button className="p-2 hover:bg-slate-100 rounded-lg" title="Cấu hình cột">
                       <GripVertical size={18} className="text-slate-500" />
                     </button>
-                    <button className="p-2 hover:bg-slate-100 rounded-lg flex items-center gap-1 text-sm">
+                    <button onClick={handleExportContactsExcel} className="p-2 hover:bg-slate-100 rounded-lg flex items-center gap-1 text-sm">
                       <FileSpreadsheet size={18} className="text-green-600" />
                       Xuất Excel
                     </button>

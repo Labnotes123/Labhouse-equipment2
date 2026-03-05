@@ -41,6 +41,9 @@ The application is now a full-featured equipment management system with authenti
   - Add email to MOCK_USERS_LIST with proper emails for director (cong.le@roche.com)
   - Update NewDeviceTab to send notifications via API (which triggers email sending)
   - Update approve/reject handlers to also send notifications via API
+- [x] **History Tab Fix** - Fixed to load data from API properly with fallback to mock data
+- [x] **Admin Tab Enhancements** - Fixed history config save to localStorage, backup now includes all data types (users, branches, positions, suppliers), restore loads from localStorage on app mount
+- [x] **History Logging** - Added addHistory calls to NewDeviceTab and DashboardTab to automatically log user actions (send proposal, approve, reject) to the history system
 
 ## Current Structure
 

@@ -1041,7 +1041,7 @@ export default function AdminTab() {
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-purple-500"
                   >
                     <option value="">Chọn khoa phòng</option>
-                    {[...new Set([...branches.flatMap(b => b.departments), ...departments])].map(d => <option key={d} value={d}>{d}</option>)}
+                    {mockDepartments.filter(d => d.isActive).map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                   </select>
                 </div>
               </div>

@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
       id: generateId(),
       name: body.name,
       code: body.code || `CN-${Date.now()}`,
-      departments: body.departments || [],
       isActive: body.isActive ?? true,
       createdAt: new Date().toISOString(),
     };

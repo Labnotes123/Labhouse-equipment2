@@ -376,9 +376,49 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
     info("Xem chi tiết", `${item.code} - ${item.name}`);
   };
 
-  // Export to Excel (mock)
+  // Export to Excel
   const handleExport = () => {
-    info("Xuất Excel", "Đang xuất dữ liệu...");
+    try {
+      // Prepare data for export
+      const headers = ["Mã phiếu", "Loại", "Tên thiết bị", "Người yêu cầu", "Ngày yêu cầu", "Trạng thái"];
+      const rows = filteredApprovals.map((item) => [
+        item.code,
+        item.type === "TB_Mới" ? "Thiết bị mới" :
+        item.type === "Sự_cố" ? "Báo cáo sự cố" :
+        item.type === "Hiệu_chuẩn" ? "Hiệu chuẩn" :
+        item.type === "Bảo_dưỡng" ? "Bảo dưỡng" :
+        item.type === "Đào_tạo" ? "Đào tạo" :
+        item.type === "Điều_chuyển" ? "Điều chuyển" :
+        item.type === "Thanh_lý" ? "Thanh lý" : item.type,
+        item.name,
+        item.requester,
+        item.requestDate ? new Date(item.requestDate).toLocaleDateString("vi-VN") : "",
+        item.status === "Chờ_phê_duyệt" ? "Chờ phê duyệt" : item.status,
+      ]);
+      
+      // Create CSV content
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      ].join("\n");
+      
+      // Add BOM for UTF-8
+      const BOM = "\uFEFF";
+      const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Danh_sach_phe_duyet_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      success("Xuất Excel thành công", `Đã xuất ${filteredApprovals.length} phiếu`);
+    } catch (err) {
+      console.error("[Export Excel] Error:", err);
+      showError("Lỗi xuất Excel");
+    }
   };
 
   return (
@@ -403,7 +443,7 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
       {/* PHẦN 1: KHU VỰC CẢNH BÁO & PHÊ DUYỆT TỔNG HỢP */}
       
       {/* 1.1. Alert Widget Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <button
             key={i}

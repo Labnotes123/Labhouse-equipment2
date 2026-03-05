@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
       name: string;
       code?: string;
       description?: string;
+      departmentId?: string;
+      departmentName?: string;
+      branchId?: string;
+      branchName?: string;
       isActive?: boolean;
     };
 
@@ -43,6 +47,10 @@ export async function POST(req: NextRequest) {
       name: body.name,
       code: body.code || `CV-${Date.now()}`,
       description: body.description || "",
+      departmentId: body.departmentId || "",
+      departmentName: body.departmentName || "",
+      branchId: body.branchId || "",
+      branchName: body.branchName || "",
       isActive: body.isActive ?? true,
       createdAt: new Date().toISOString(),
     };

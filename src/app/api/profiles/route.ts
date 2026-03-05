@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {
       name: string;
+      code?: string;
       description?: string;
       permissions?: Permission[];
       isActive?: boolean;
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
     const newProfile: Profile = {
       id: generateId(),
       name: body.name,
+      code: body.code || `PF-${Date.now()}`,
       description: body.description || "",
       permissions: body.permissions || [],
       isActive: body.isActive ?? true,

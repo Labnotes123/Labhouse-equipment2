@@ -78,7 +78,7 @@ export default function IncidentReportTab() {
   const workOrderAttachmentInputRef = useRef<HTMLInputElement>(null);
 
   // State
-  const { incidents: contextIncidents, devices: contextDevices, addIncident, updateIncident } = useData();
+  const { incidents: contextIncidents, devices: contextDevices, addIncident, updateIncident, addHistory } = useData();
   const [incidentReports, setIncidentReports] = useState<IncidentReport[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   useEffect(() => { setIncidentReports(contextIncidents); }, [contextIncidents]);
@@ -420,6 +420,22 @@ export default function IncidentReportTab() {
       incidentReports.map((i) => i.id === incident.id ? { ...i, ...approveUpdates } : i)
     );
     updateIncident(incident.id, approveUpdates).catch(console.error);
+    
+    // Add history log
+    addHistory({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: user?.id || "",
+      userName: user?.fullName || "",
+      userRole: user?.role || "",
+      action: "Phê duyệt",
+      description: `Phê duyệt phiếu báo cáo sự cố ${incident.reportCode}`,
+      targetType: "Sự cố",
+      targetId: incident.id,
+      targetName: incident.reportCode,
+      timestamp: new Date().toISOString(),
+    }).catch(console.error);
+    
     success("Thành công", "Đã phê duyệt phiếu báo cáo sự cố");
   };
 
@@ -546,6 +562,22 @@ export default function IncidentReportTab() {
       incidentReports.map((i) => i.id === incident.id ? { ...i, ...completeRepairUpdates } : i)
     );
     updateIncident(incident.id, completeRepairUpdates).catch(console.error);
+    
+    // Add history log
+    addHistory({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: user?.id || "",
+      userName: user?.fullName || "",
+      userRole: user?.role || "",
+      action: "Hoàn thành sửa chữa",
+      description: `Hoàn tất sửa chữa cho phiếu báo cáo sự cố ${incident.reportCode}`,
+      targetType: "Sự cố",
+      targetId: incident.id,
+      targetName: incident.reportCode,
+      timestamp: new Date().toISOString(),
+    }).catch(console.error);
+    
     setShowSupplierContact(false);
     success("Thành công", "Đã hoàn tất sửa chữa. Vui lòng hoàn tất phiếu báo cáo sự cố.");
   };
@@ -627,6 +659,22 @@ export default function IncidentReportTab() {
       )
     );
     updateIncident(selectedIncident.id, updateData).catch(console.error);
+    
+    // Add history log
+    addHistory({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: user?.id || "",
+      userName: user?.fullName || "",
+      userRole: user?.role || "",
+      action: "Cập nhật",
+      description: `Cập nhật phiếu báo cáo sự cố ${selectedIncident.reportCode}`,
+      targetType: "Sự cố",
+      targetId: selectedIncident.id,
+      targetName: selectedIncident.reportCode,
+      timestamp: new Date().toISOString(),
+    }).catch(console.error);
+    
     setShowEditForm(false);
     success("Thành công", "Đã cập nhật phiếu báo cáo sự cố");
   };

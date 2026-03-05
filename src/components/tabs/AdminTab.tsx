@@ -181,6 +181,9 @@ export default function AdminTab() {
   // History config state
   const [historyConfig, setHistoryConfig] = useState(mockHistoryConfig);
 
+  // Get addHistory from DataContext (before canAccess check)
+  const { addHistory } = useData();
+
   const canAccess = user?.role === "Admin" || user?.role === "Giám đốc";
 
   // Fetch users from API
@@ -291,6 +294,22 @@ export default function AdminTab() {
         }
         const updated = await res.json() as UserProfile;
         setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+        
+        // Add history log
+        addHistory({
+          actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+          actionNumber: Date.now(),
+          userId: user?.id || "",
+          userName: user?.fullName || "",
+          userRole: user?.role || "",
+          action: "Cập nhật",
+          description: `Cập nhật thông tin người dùng ${updated.fullName}`,
+          targetType: "Người dùng",
+          targetId: updated.id,
+          targetName: updated.fullName,
+          timestamp: new Date().toISOString(),
+        }).catch(console.error);
+        
         success("Đã cập nhật", "Thông tin người dùng đã được cập nhật");
       } else {
         // Create new user
@@ -306,6 +325,22 @@ export default function AdminTab() {
         }
         const created = await res.json() as UserProfile;
         setUsers(prev => [created, ...prev]);
+        
+        // Add history log
+        addHistory({
+          actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+          actionNumber: Date.now(),
+          userId: user?.id || "",
+          userName: user?.fullName || "",
+          userRole: user?.role || "",
+          action: "Tạo mới",
+          description: `Tạo mới người dùng ${created.fullName}`,
+          targetType: "Người dùng",
+          targetId: created.id,
+          targetName: created.fullName,
+          timestamp: new Date().toISOString(),
+        }).catch(console.error);
+        
         success("Đã thêm", "Người dùng mới đã được thêm");
       }
     } catch (e) {
@@ -324,7 +359,26 @@ export default function AdminTab() {
         error("Lỗi", err.error ?? "Không thể xóa người dùng");
         return;
       }
+      const userToDelete = users.find(u => u.id === userId);
       setUsers(prev => prev.filter(u => u.id !== userId));
+      
+      // Add history log
+      if (userToDelete) {
+        addHistory({
+          actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+          actionNumber: Date.now(),
+          userId: user?.id || "",
+          userName: user?.fullName || "",
+          userRole: user?.role || "",
+          action: "Xóa",
+          description: `Xóa người dùng ${userToDelete.fullName}`,
+          targetType: "Người dùng",
+          targetId: userId,
+          targetName: userToDelete.fullName,
+          timestamp: new Date().toISOString(),
+        }).catch(console.error);
+      }
+      
       success("Đã xóa", "Người dùng đã được xóa");
     } catch (e) {
       error("Lỗi", String(e));

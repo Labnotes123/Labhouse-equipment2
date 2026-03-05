@@ -52,6 +52,19 @@ interface TrainingModalProps {
   showToast: (type: "success" | "error" | "info", title: string, message: string) => void;
   onNotification: (type: "bell" | "email", title: string, message: string) => void;
   currentUser: User | null;
+  addHistory?: (log: {
+    actionCode: string;
+    actionNumber: number;
+    userId: string;
+    userName: string;
+    userRole: string;
+    action: string;
+    description: string;
+    targetType: "Thiết bị" | "Người dùng" | "Hệ thống" | "Đề xuất" | "Sự cố" | "Lịch" | "Hiệu chuẩn" | "Đào tạo" | "Bảo dưỡng" | "Thanh lý" | "Điều chuyển";
+    targetId: string;
+    targetName: string;
+    timestamp: string;
+  }) => Promise<void>;
 }
 
 // Tab types
@@ -353,6 +366,7 @@ export default function TrainingModal({
   showToast,
   onNotification,
   currentUser,
+  addHistory,
 }: TrainingModalProps) {
   const [activeTab, setActiveTab] = useState<TrainingTab>("plans");
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
@@ -493,6 +507,21 @@ export default function TrainingModal({
       setHasNewNotification(true);
       onNotification("bell", "Đề xuất đào tạo mới", `Kế hoạch ${newPlanCode} chờ phê duyệt`);
       onNotification("email", "Phê duyệt đào tạo", `Có kế hoạch đào tạo ${device.name} chờ bạn duyệt`);
+      
+      // Add history log
+      addHistory?.({
+        actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+        actionNumber: Date.now(),
+        userId: currentUser?.id || "",
+        userName: currentUser?.fullName || currentUser?.username || "",
+        userRole: currentUser?.role || "",
+        action: "Gửi phê duyệt",
+        description: `Gửi kế hoạch đào tạo ${newPlanCode} để phê duyệt`,
+        targetType: "Đào tạo",
+        targetId: planData.id,
+        targetName: newPlanCode,
+        timestamp: new Date().toISOString(),
+      });
     }
   };
 
@@ -500,6 +529,21 @@ export default function TrainingModal({
     const updatedPlan = { ...plan, status: "Đã duyệt" as const, updatedAt: new Date().toISOString() };
     onPlansChange(trainingPlans.map((p) => (p.id === plan.id ? updatedPlan : p)));
     showToast("success", "Thành công", `Đã phê duyệt kế hoạch ${plan.planCode}`);
+    
+    // Add history log
+    addHistory?.({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: currentUser?.id || "",
+      userName: currentUser?.fullName || currentUser?.username || "",
+      userRole: currentUser?.role || "",
+      action: "Phê duyệt",
+      description: `Phê duyệt kế hoạch đào tạo ${plan.planCode}`,
+      targetType: "Đào tạo",
+      targetId: plan.id,
+      targetName: plan.planCode,
+      timestamp: new Date().toISOString(),
+    });
     
     // Notify trainees
     plan.trainees.forEach((trainee) => {
@@ -582,6 +626,21 @@ export default function TrainingModal({
       onDeviceUpdate(device.id, { status: "Đang vận hành" });
       showToast("success", "Thiết bị sẵn sàng", `${device.name} đã đủ điều kiện và sẵn sàng phục vụ xét nghiệm!`);
     }
+
+    // Add history log
+    addHistory?.({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: currentUser?.id || "",
+      userName: currentUser?.fullName || currentUser?.username || "",
+      userRole: currentUser?.role || "",
+      action: "Ghi nhận kết quả",
+      description: `Ghi nhận kết quả đào tạo ${selectedPlanForResult.planCode}, ${passedTrainees.length} người đạt`,
+      targetType: "Đào tạo",
+      targetId: selectedPlanForResult.id,
+      targetName: selectedPlanForResult.planCode,
+      timestamp: new Date().toISOString(),
+    });
 
     setSelectedPlanForResult(null);
     setResultForm({

@@ -420,7 +420,7 @@ export default function DeviceProfileTab() {
   const returnHandoverAttachmentInputRef = useRef<HTMLInputElement>(null);
   const returnAcceptanceFormAttachmentInputRef = useRef<HTMLInputElement>(null);
   
-  const { devices: contextDevices, addDevice, updateDevice, incidents, schedules } = useData();
+  const { devices: contextDevices, addDevice, updateDevice, incidents, schedules, addHistory } = useData();
   const [devices, setDevices] = useState<Device[]>([]);
   useEffect(() => { setDevices(contextDevices); }, [contextDevices]);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -3583,6 +3583,7 @@ export default function DeviceProfileTab() {
             console.log(`Notification: ${type} - ${title}: ${message}`);
           }}
           currentUser={user}
+          addHistory={addHistory}
         />
       )}
 

@@ -293,7 +293,7 @@ export interface HistoryLog {
   userRole: string;
   action: string;
   description: string;
-  targetType: "Thiết bị" | "Người dùng" | "Hệ thống" | "Đề xuất" | "Sự cố" | "Lịch";
+  targetType: "Thiết bị" | "Người dùng" | "Hệ thống" | "Đề xuất" | "Sự cố" | "Lịch" | "Hiệu chuẩn" | "Đào tạo" | "Bảo dưỡng" | "Thanh lý" | "Điều chuyển";
   targetId?: string;
   targetName?: string;
   timestamp: string;

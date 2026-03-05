@@ -46,7 +46,7 @@ export default function CalibrationTab() {
   const [activeTab, setActiveTab] = useState<CalibrationTab>("request");
   const [calibrationRequests, setCalibrationRequests] = useState<any[]>([]);
   const [calibrationResults, setCalibrationResults] = useState<any[]>([]);
-  const { schedules: contextSchedules, devices: contextDevices, addSchedule } = useData();
+  const { schedules: contextSchedules, devices: contextDevices, addSchedule, addHistory } = useData();
   const [schedules, setSchedules] = useState<CalibrationSchedule[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   useEffect(() => { setSchedules(contextSchedules); }, [contextSchedules]);
@@ -344,6 +344,22 @@ export default function CalibrationTab() {
       assignedTo: user?.fullName ?? "",
       notes: request.notes,
     }).catch(console.error);
+    
+    // Add history log
+    addHistory({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: user?.id || "",
+      userName: user?.fullName || "",
+      userRole: user?.role || "",
+      action: "Phê duyệt",
+      description: `Phê duyệt yêu cầu hiệu chuẩn ${request.requestCode || request.code}`,
+      targetType: "Hiệu chuẩn",
+      targetId: request.id,
+      targetName: request.deviceName,
+      timestamp: new Date().toISOString(),
+    }).catch(console.error);
+    
     success("Thành công", "Đã phê duyệt yêu cầu hiệu chuẩn");
   };
 

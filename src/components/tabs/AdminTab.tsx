@@ -43,6 +43,7 @@ import {
   mockUserProfiles, 
   mockProfiles, 
   mockBranches, 
+  mockDepartments,
   mockPositions, 
   mockDevices,
   countries,
@@ -54,6 +55,7 @@ import {
   PermissionCategory,
   UserProfile,
   Branch,
+  Department,
   Position,
   Supplier
 } from "@/lib/mockData";
@@ -73,6 +75,7 @@ import {
 type AdminSection = 
   | "users" 
   | "profiles" 
+  | "branches"
   | "departments" 
   | "positions" 
   | "countries"
@@ -85,8 +88,9 @@ type UserColumn = "username" | "fullName" | "employeeId" | "phone" | "email" | "
 const sections: { id: AdminSection; label: string; icon: React.ReactNode; color: string }[] = [
   { id: "users", label: "Cấu hình người dùng", icon: <Users size={20} />, color: "from-purple-500 to-violet-600" },
   { id: "profiles", label: "Cấu hình Profile", icon: <UserCheck size={20} />, color: "from-blue-500 to-indigo-600" },
-  { id: "departments", label: "Khoa phòng & Chi nhánh", icon: <Building2 size={20} />, color: "from-orange-500 to-amber-600" },
-  { id: "positions", label: "Chức vụ", icon: <Briefcase size={20} />, color: "from-cyan-500 to-blue-600" },
+  { id: "branches", label: "Chi nhánh", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
+  { id: "departments", label: "Khoa phòng", icon: <Building2 size={20} />, color: "from-orange-500 to-amber-600" },
+  { id: "positions", label: "Vị trí/Chức vụ", icon: <Briefcase size={20} />, color: "from-cyan-500 to-blue-600" },
   { id: "countries", label: "Nước sản xuất", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
   { id: "suppliers", label: "Nhà cung cấp", icon: <Truck size={20} />, color: "from-pink-500 to-rose-600" },
   { id: "history_config", label: "Cấu hình lịch sử", icon: <History size={20} />, color: "from-slate-500 to-zinc-600" },
@@ -154,15 +158,18 @@ export default function AdminTab() {
 
   // Branch/Department state
   const [branches, setBranches] = useState<Branch[]>(mockBranches);
+  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const [newBranch, setNewBranch] = useState({ name: "", code: "", departments: "" });
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [newBranch, setNewBranch] = useState({ name: "" });
   
   // Position state
   const [positions, setPositions] = useState<Position[]>(mockPositions);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [showPositionModal, setShowPositionModal] = useState(false);
-  const [newPosition, setNewPosition] = useState({ name: "", code: "", description: "" });
+  const [newPosition, setNewPosition] = useState({ name: "", description: "", departmentId: "" });
 
   // Country state
   const [countryList, setCountryList] = useState<string[]>(countries);
@@ -411,14 +418,29 @@ export default function AdminTab() {
           });
           if (!res.ok) throw new Error("Failed to update profile");
           const updated = await res.json();
-          setProfiles(prev => prev.map(p => p.id === editingProfile.id ? { ...updated, createdAt: p.createdAt, updatedAt: new Date().toISOString() } : p));
+          setProfiles(prev => prev.map(p => p.id === editingProfile.id ? { ...updated, code: p.code, createdAt: p.createdAt, updatedAt: new Date().toISOString() } : p));
           success("Đã cập nhật", "Profile đã được cập nhật");
+          // Log to history
+          addHistory({
+            actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+            actionNumber: Date.now(),
+            userId: user?.id || "",
+            userName: user?.fullName || "",
+            userRole: user?.role || "",
+            action: "Cập nhật profile",
+            description: `Cập nhật profile ${editingProfile.name} (${editingProfile.code})`,
+            targetType: "Profile",
+            targetId: editingProfile.id,
+            targetName: `${editingProfile.name} (${editingProfile.code})`,
+            timestamp: new Date().toISOString(),
+          }).catch(console.error);
         } else {
           // Create new profile
           const res = await fetch("/api/profiles", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              code: editingProfile.code,
               name: editingProfile.name,
               description: editingProfile.description,
               permissions: editingProfile.permissions,
@@ -429,6 +451,20 @@ export default function AdminTab() {
           const created = await res.json();
           setProfiles(prev => [...prev, { ...created, createdAt: new Date().toISOString() }]);
           success("Đã tạo", "Profile mới đã được tạo");
+          // Log to history
+          addHistory({
+            actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+            actionNumber: Date.now(),
+            userId: user?.id || "",
+            userName: user?.fullName || "",
+            userRole: user?.role || "",
+            action: "Tạo profile",
+            description: `Tạo mới profile ${editingProfile.name} (${editingProfile.code})`,
+            targetType: "Profile",
+            targetId: created.id,
+            targetName: `${editingProfile.name} (${editingProfile.code})`,
+            timestamp: new Date().toISOString(),
+          }).catch(console.error);
         }
       } catch (err) {
         console.error("Profile save error:", err);
@@ -463,7 +499,6 @@ export default function AdminTab() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: editingBranch.name,
-              departments: editingBranch.departments,
               isActive: editingBranch.isActive,
             }),
           });
@@ -472,13 +507,12 @@ export default function AdminTab() {
           setBranches(prev => prev.map(b => b.id === editingBranch.id ? { ...updated, createdAt: b.createdAt } : b));
           success("Đã cập nhật", "Chi nhánh đã được cập nhật");
         } else {
-          // Create new branch - code will be auto-generated
+          // Create new branch
           const res = await fetch("/api/branches", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: editingBranch.name,
-              departments: editingBranch.departments || [],
               isActive: editingBranch.isActive ?? true,
             }),
           });
@@ -499,6 +533,33 @@ export default function AdminTab() {
   const handleDeleteBranch = (branchId: string) => {
     setBranches(prev => prev.filter(b => b.id !== branchId));
     success("Đã xóa", "Chi nhánh đã được xóa");
+  };
+
+  const handleSaveDepartment = async () => {
+    if (editingDepartment) {
+      try {
+        if (editingDepartment.id) {
+          // Update existing department
+          setDepartments(prev => prev.map(d => d.id === editingDepartment.id ? editingDepartment : d));
+          success("Đã cập nhật", "Khoa phòng đã được cập nhật");
+        } else {
+          // Create new department
+          const newDept = { ...editingDepartment, id: `d${Date.now()}`, createdAt: new Date().toISOString() };
+          setDepartments(prev => [...prev, newDept]);
+          success("Đã thêm", "Khoa phòng mới đã được thêm");
+        }
+      } catch (err) {
+        console.error("Department save error:", err);
+        error("Lỗi", "Không thể lưu khoa phòng");
+      }
+    }
+    setShowDepartmentModal(false);
+    setEditingDepartment(null);
+  };
+
+  const handleDeleteDepartment = (deptId: string) => {
+    setDepartments(prev => prev.filter(d => d.id !== deptId));
+    success("Đã xóa", "Khoa phòng đã được xóa");
   };
 
   // ============ POSITION MANAGEMENT ============
@@ -1068,8 +1129,14 @@ export default function AdminTab() {
 
         <button
           onClick={() => { 
+            const maxCode = profiles.reduce((max, p) => {
+              const num = parseInt(p.code?.replace(/\D/g, '') || '0');
+              return num > max ? num : max;
+            }, 0);
+            const newCode = String(maxCode + 1).padStart(3, '0');
             const newProfile: Profile = {
               id: "",
+              code: newCode,
               name: "",
               description: "",
               permissions: permissionCategories.flatMap(cat => [
@@ -1094,6 +1161,7 @@ export default function AdminTab() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50">
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mã Profile</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Tên Profile</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mô tả</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Số quyền</th>
@@ -1104,6 +1172,9 @@ export default function AdminTab() {
             <tbody className="divide-y divide-slate-50">
               {paginatedProfiles.map(p => (
                 <tr key={p.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg">{p.code || '—'}</span>
+                  </td>
                   <td className="px-4 py-3">
                     <span className="font-semibold text-slate-700 text-sm">{p.name}</span>
                   </td>
@@ -1258,69 +1329,88 @@ export default function AdminTab() {
     </div>
   );
 
-  const renderDepartmentsSection = () => (
+  const renderBranchesSection = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            <Building2 size={18} className="text-orange-600" />
-            Danh sách Chi nhánh và Phòng ban
+            <Globe size={18} className="text-green-600" />
+            Danh sách Chi nhánh
           </h3>
           <button
-            onClick={() => { setEditingBranch({ id: "", name: "", code: "", departments: [], isActive: true }); setShowBranchModal(true); }}
+            onClick={() => { 
+              const maxCode = branches.reduce((max, b) => {
+                const num = parseInt(b.code?.replace(/\D/g, '') || '0');
+                return num > max ? num : max;
+              }, 0);
+              const newCode = String(maxCode + 1).padStart(3, '0');
+              setEditingBranch({ id: "", name: "", code: newCode, isActive: true }); 
+              setShowBranchModal(true); 
+            }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm"
-            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
+            style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}
           >
             <Plus size={16} />
             Thêm Chi nhánh
           </button>
         </div>
 
-        <div className="space-y-4">
-          {branches.map(branch => (
-            <div key={branch.id} className="border border-slate-200 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h4 className="font-bold text-slate-800">{branch.name}</h4>
-                  <p className="text-xs text-slate-400">Mã: {branch.code}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setEditingBranch(branch); setShowBranchModal(true); }}
-                    className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
-                  >
-                    <Edit3 size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteBranch(branch.id)}
-                    className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {branch.departments.map((dept, idx) => (
-                  <span key={idx} className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-                    {dept}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-green-50">
+                <th className="text-left px-4 py-3 text-xs font-bold text-green-700 uppercase">Mã</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-green-700 uppercase">Tên Chi nhánh</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-green-700 uppercase">Trạng thái</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-green-700 uppercase">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-green-50">
+              {branches.map(branch => (
+                <tr key={branch.id} className="hover:bg-green-50">
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-lg">{branch.code}</span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-slate-700">{branch.name}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${branch.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {branch.isActive ? 'Hoạt động' : 'Không hoạt động'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => { setEditingBranch(branch); setShowBranchModal(true); }}
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBranch(branch.id)}
+                        className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
+                        title="Xóa"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Branch Modal */}
       {showBranchModal && editingBranch && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl transform transition-all">
-            {/* Header with gradient */}
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-orange-500 to-amber-600">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl transform transition-all">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-green-500 to-emerald-600">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Building2 size={22} className="text-white" />
+                    <Globe size={22} className="text-white" />
                   </div>
                   <h3 className="font-bold text-xl text-white">
                     {editingBranch.id ? "Chỉnh sửa Chi nhánh" : "Thêm Chi nhánh mới"}
@@ -1334,26 +1424,15 @@ export default function AdminTab() {
                 </button>
               </div>
             </div>
-            {/* Content */}
-            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
-              {editingBranch.id && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-600 mb-1">ID Chi nhánh</label>
-                  <input
-                    type="text"
-                    value={editingBranch.id}
-                    disabled
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500"
-                  />
-                </div>
-              )}
+            <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-600 mb-1">Tên Chi nhánh *</label>
                 <input
                   type="text"
                   value={editingBranch.name}
                   onChange={(e) => setEditingBranch({ ...editingBranch, name: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-orange-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-green-500"
+                  placeholder="Nhập tên chi nhánh"
                 />
               </div>
               <div>
@@ -1363,20 +1442,19 @@ export default function AdminTab() {
                   value={editingBranch.code}
                   disabled
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500"
-                  placeholder="Mã sẽ được tự sinh khi lưu"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-1">Các phòng ban (phân cách bằng dấu phẩy)</label>
-                <textarea
-                  value={editingBranch.departments?.join(", ") || ""}
-                  onChange={(e) => setEditingBranch({ ...editingBranch, departments: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-orange-500 h-24 resize-none"
-                  placeholder="Huyết học, Sinh hóa, Vi sinh, ..."
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="branchActive"
+                  checked={editingBranch.isActive}
+                  onChange={(e) => setEditingBranch({ ...editingBranch, isActive: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
                 />
+                <label htmlFor="branchActive" className="text-sm text-slate-600">Hoạt động</label>
               </div>
             </div>
-            {/* Footer */}
             <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
               <button
                 onClick={() => { setShowBranchModal(false); setEditingBranch(null); }}
@@ -1386,7 +1464,179 @@ export default function AdminTab() {
               </button>
               <button
                 onClick={handleSaveBranch}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm shadow-lg"
+                style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}
+              >
+                <Save size={18} />
+                Lưu thông tin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderDepartmentsSection = () => (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <Building2 size={18} className="text-orange-600" />
+            Danh sách Khoa phòng
+          </h3>
+          <button
+            onClick={() => { 
+              const maxCode = departments.reduce((max, d) => {
+                const num = parseInt(d.code?.replace(/\D/g, '') || '0');
+                return num > max ? num : max;
+              }, 0);
+              const newCode = String(maxCode + 1).padStart(3, '0');
+              setEditingDepartment({ id: "", name: "", code: newCode, branchId: "", isActive: true }); 
+              setShowDepartmentModal(true); 
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm"
+            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
+          >
+            <Plus size={16} />
+            Thêm Khoa phòng
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-orange-50">
+                <th className="text-left px-4 py-3 text-xs font-bold text-orange-700 uppercase">Mã</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-orange-700 uppercase">Tên Khoa phòng</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-orange-700 uppercase">Thuộc Chi nhánh</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-orange-700 uppercase">Trạng thái</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-orange-700 uppercase">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-orange-50">
+              {departments.map(dept => (
+                <tr key={dept.id} className="hover:bg-orange-50">
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-xs font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-lg">{dept.code}</span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-slate-700">{dept.name}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">
+                    {dept.branchName || <span className="text-slate-400 italic">Chưa chọn</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${dept.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {dept.isActive ? 'Hoạt động' : 'Không hoạt động'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => { setEditingDepartment(dept); setShowDepartmentModal(true); }}
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDepartment(dept.id)}
+                        className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
+                        title="Xóa"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Department Modal */}
+      {showDepartmentModal && editingDepartment && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl transform transition-all">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-orange-500 to-amber-600">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Building2 size={22} className="text-white" />
+                  </div>
+                  <h3 className="font-bold text-xl text-white">
+                    {editingDepartment.id ? "Chỉnh sửa Khoa phòng" : "Thêm Khoa phòng mới"}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => { setShowDepartmentModal(false); setEditingDepartment(null); }} 
+                  className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                >
+                  <X size={20} className="text-white" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Tên Khoa phòng *</label>
+                <input
+                  type="text"
+                  value={editingDepartment.name}
+                  onChange={(e) => setEditingDepartment({ ...editingDepartment, name: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-orange-500"
+                  placeholder="Nhập tên khoa phòng"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Mã Khoa phòng</label>
+                <input
+                  type="text"
+                  value={editingDepartment.code}
+                  disabled
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Thuộc Chi nhánh *</label>
+                <select
+                  value={editingDepartment.branchId}
+                  onChange={(e) => {
+                    const selectedBranch = branches.find(b => b.id === e.target.value);
+                    setEditingDepartment({ 
+                      ...editingDepartment, 
+                      branchId: e.target.value,
+                      branchName: selectedBranch?.name || ''
+                    });
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-orange-500"
+                >
+                  <option value="">-- Chọn Chi nhánh --</option>
+                  {branches.filter(b => b.isActive).map(branch => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="deptActive"
+                  checked={editingDepartment.isActive}
+                  onChange={(e) => setEditingDepartment({ ...editingDepartment, isActive: e.target.checked })}
+                  className="w-4 h-4 text-orange-600 rounded"
+                />
+                <label htmlFor="deptActive" className="text-sm text-slate-600">Hoạt động</label>
+              </div>
+            </div>
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+              <button
+                onClick={() => { setShowDepartmentModal(false); setEditingDepartment(null); }}
+                className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleSaveDepartment}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm shadow-lg"
                 style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
               >
                 <Save size={18} />
@@ -1408,7 +1658,15 @@ export default function AdminTab() {
             Danh sách Chức vụ
           </h3>
           <button
-            onClick={() => { setEditingPosition({ id: "", name: "", code: "", description: "", isActive: true }); setShowPositionModal(true); }}
+            onClick={() => { 
+              const maxCode = positions.reduce((max, p) => {
+                const num = parseInt(p.code?.replace(/\D/g, '') || '0');
+                return num > max ? num : max;
+              }, 0);
+              const newCode = String(maxCode + 1).padStart(3, '0');
+              setEditingPosition({ id: "", name: "", code: newCode, description: "", departmentId: "", isActive: true }); 
+              setShowPositionModal(true); 
+            }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm"
             style={{ background: "linear-gradient(135deg, #06b6d4, #0891b2)" }}
           >
@@ -1423,7 +1681,8 @@ export default function AdminTab() {
               <tr className="bg-slate-50">
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mã</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Tên Chức vụ</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mô tả</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Khoa phòng</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Chi nhánh</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Trạng thái</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Thao tác</th>
               </tr>
@@ -1435,7 +1694,8 @@ export default function AdminTab() {
                     <span className="font-mono text-xs font-bold text-cyan-600 bg-cyan-50 px-2 py-1 rounded-lg">{pos.code}</span>
                   </td>
                   <td className="px-4 py-3 font-semibold text-slate-700">{pos.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{pos.description || "—"}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{pos.departmentName || <span className="text-slate-400 italic">Chưa chọn</span>}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{pos.branchName || <span className="text-slate-400 italic">—</span>}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${pos.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
                       {pos.isActive ? "Hoạt động" : "Không hoạt động"}
@@ -1516,7 +1776,38 @@ export default function AdminTab() {
                   value={editingPosition.code}
                   disabled
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500"
-                  placeholder="Mã sẽ được tự sinh khi lưu"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Thuộc Khoa phòng *</label>
+                <select
+                  value={editingPosition.departmentId || ""}
+                  onChange={(e) => {
+                    const selectedDept = departments.find(d => d.id === e.target.value);
+                    setEditingPosition({ 
+                      ...editingPosition, 
+                      departmentId: e.target.value,
+                      departmentName: selectedDept?.name || '',
+                      branchId: selectedDept?.branchId || '',
+                      branchName: selectedDept?.branchName || ''
+                    });
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-cyan-500"
+                >
+                  <option value="">-- Chọn Khoa phòng --</option>
+                  {departments.filter(d => d.isActive).map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name} ({dept.branchName})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Chi nhánh</label>
+                <input
+                  type="text"
+                  value={editingPosition.branchName || editingPosition.branchId ? (departments.find(d => d.id === editingPosition.departmentId)?.branchName || '') : ''}
+                  disabled
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500"
+                  placeholder="Tự động điền khi chọn khoa phòng"
                 />
               </div>
               <div>
@@ -2227,34 +2518,49 @@ export default function AdminTab() {
     );
   };
 
+  const [showDeleteHistoryModal, setShowDeleteHistoryModal] = useState(false);
+  const [deleteFromDate, setDeleteFromDate] = useState("");
+  const [deleteToDate, setDeleteToDate] = useState("");
+
   const handleDeleteHistoryNow = () => {
-    // Implement manual history deletion
+    // Show modal to select date range
+    setDeleteFromDate("");
+    setDeleteToDate("");
+    setShowDeleteHistoryModal(true);
+  };
+
+  const confirmDeleteHistory = () => {
+    if (!deleteFromDate || !deleteToDate) {
+      error("Lỗi", "Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc");
+      return;
+    }
+    
+    const fromDate = new Date(deleteFromDate);
+    const toDate = new Date(deleteToDate);
+    toDate.setHours(23, 59, 59, 999); // End of day
+    
     const allData = localStorage.getItem('labhouse_data');
     if (allData) {
       try {
         const parsed = JSON.parse(allData);
         const originalCount = parsed.history?.length || 0;
-        // Keep only last N records based on config
-        const daysToKeep = historyConfig.deleteAfterDays;
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
         
         if (parsed.history && Array.isArray(parsed.history)) {
           const filteredHistory = parsed.history.filter((log: any) => {
             const logDate = new Date(log.timestamp);
-            return logDate > cutoffDate;
+            return logDate < fromDate || logDate > toDate;
           });
           parsed.history = filteredHistory;
           localStorage.setItem('labhouse_data', JSON.stringify(parsed));
-          success('Thành công', `Đã xóa ${originalCount - filteredHistory.length} bản ghi lịch sử`);
+          success('Thành công', `Đã xóa ${originalCount - filteredHistory.length} bản ghi lịch sử trong khoảng thời gian đã chọn`);
         }
-        setHistoryConfig({ ...historyConfig, lastAutoDelete: new Date().toLocaleString('vi-VN') });
       } catch (err) {
         error('Lỗi', 'Không thể xóa lịch sử');
       }
     } else {
       success('Thông báo', 'Chưa có dữ liệu lịch sử để xóa');
     }
+    setShowDeleteHistoryModal(false);
   };
 
   const renderHistoryConfigSection = () => (
@@ -2338,6 +2644,71 @@ export default function AdminTab() {
           </button>
         </div>
       </div>
+
+      {/* Delete History Modal */}
+      {showDeleteHistoryModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl transform transition-all">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-slate-500 to-slate-600">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <RefreshCw size={22} className="text-white" />
+                  </div>
+                  <h3 className="font-bold text-xl text-white">
+                    Xóa lịch sử thủ công
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowDeleteHistoryModal(false)} 
+                  className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                >
+                  <X size={20} className="text-white" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                Chọn khoảng thời gian lịch sử cần xóa. Các bản ghi trong khoảng thời gian này sẽ bị xóa vĩnh viễn.
+              </p>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Từ ngày *</label>
+                <input
+                  type="date"
+                  value={deleteFromDate}
+                  onChange={(e) => setDeleteFromDate(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Đến ngày *</label>
+                <input
+                  type="date"
+                  value={deleteToDate}
+                  onChange={(e) => setDeleteToDate(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-slate-500"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+              <button
+                onClick={() => setShowDeleteHistoryModal(false)}
+                className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={confirmDeleteHistory}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm shadow-lg"
+                style={{ background: "linear-gradient(135deg, #64748b, #475569)" }}
+              >
+                <Trash2 size={18} />
+                Xác nhận xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -2347,6 +2718,8 @@ export default function AdminTab() {
         return renderUsersSection();
       case "profiles":
         return renderProfilesSection();
+      case "branches":
+        return renderBranchesSection();
       case "departments":
         return renderDepartmentsSection();
       case "positions":

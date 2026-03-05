@@ -2,6 +2,7 @@
 
 export interface Profile {
   id: string;
+  code: string; // Mã profile do hệ thống tự sinh
   name: string;
   description: string;
   permissions: Permission[];
@@ -46,8 +47,17 @@ export interface UserProfile {
 export interface Branch {
   id: string;
   name: string;
-  code: string;
-  departments: string[];
+  code: string; // Mã chi nhánh do hệ thống tự sinh
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string; // Mã khoa phòng do hệ thống tự sinh
+  branchId: string; // Thuộc chi nhánh nào
+  branchName?: string; // Tên chi nhánh (để hiển thị)
   isActive: boolean;
   createdAt?: string;
 }
@@ -55,8 +65,12 @@ export interface Branch {
 export interface Position {
   id: string;
   name: string;
-  code: string;
+  code: string; // Mã vị trí do hệ thống tự sinh
   description?: string;
+  departmentId: string; // Thuộc khoa phòng nào
+  departmentName?: string; // Tên khoa phòng (để hiển thị)
+  branchId?: string; // Chi nhánh (tự điền từ department)
+  branchName?: string; // Tên chi nhánh (để hiển thị)
   isActive: boolean;
   createdAt?: string;
 }
@@ -1843,6 +1857,7 @@ export const mockUserProfiles: UserProfile[] = [
 export const mockProfiles: Profile[] = [
   {
     id: "p1",
+    code: "PF001",
     name: "Quản trị viên",
     description: "Toàn quyền quản lý hệ thống",
     permissions: [
@@ -1866,6 +1881,7 @@ export const mockProfiles: Profile[] = [
   },
   {
     id: "p2",
+    code: "PF002",
     name: "Giám đốc",
     description: "Quản lý cấp cao, có quyền phê duyệt",
     permissions: [
@@ -1889,6 +1905,7 @@ export const mockProfiles: Profile[] = [
   },
   {
     id: "p3",
+    code: "PF003",
     name: "Trưởng phòng",
     description: "Quản lý phòng xét nghiệm, phê duyệt đề xuất",
     permissions: [
@@ -1912,6 +1929,7 @@ export const mockProfiles: Profile[] = [
   },
   {
     id: "p4",
+    code: "PF004",
     name: "Nhân viên",
     description: "Nhân viên kỹ thuật, thực hiện công việc được giao",
     permissions: [
@@ -1941,30 +1959,44 @@ export const mockBranches: Branch[] = [
   {
     id: "b1",
     name: "LabHouse Central",
-    code: "LHC-Central",
-    departments: ["Huyết học", "Sinh hóa", "Vi sinh", "Miễn dịch", "IT", "Ban Giám đốc", "Quản lý chất lượng", "Thiết bị"],
+    code: "CN001",
     isActive: true,
+    createdAt: "2023-01-01T00:00:00",
   },
   {
     id: "b2",
     name: "LabHouse District 1",
-    code: "LHC-D1",
-    departments: ["Huyết học", "Sinh hóa", "Tổng quát"],
+    code: "CN002",
     isActive: true,
+    createdAt: "2023-01-01T00:00:00",
   },
+];
+
+// ============ MOCK DEPARTMENTS (Khoa phòng) ============
+
+export const mockDepartments: Department[] = [
+  { id: "d1", name: "Huyết học", code: "KP001", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d2", name: "Sinh hóa", code: "KP002", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d3", name: "Vi sinh", code: "KP003", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d4", name: "Miễn dịch", code: "KP004", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d5", name: "IT", code: "KP005", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d6", name: "Ban Giám đốc", code: "KP006", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d7", name: "Quản lý chất lượng", code: "KP007", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d8", name: "Thiết bị", code: "KP008", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "d9", name: "Tổng quát", code: "KP009", branchId: "b2", branchName: "LabHouse District 1", isActive: true, createdAt: "2023-01-01T00:00:00" },
 ];
 
 // ============ MOCK POSITIONS ============
 
 export const mockPositions: Position[] = [
-  { id: "pos1", name: "Giám đốc", code: "GD", description: "Giám đốc trung tâm", isActive: true },
-  { id: "pos2", name: "Phó Giám đốc", code: "PGD", description: "Phó Giám đốc", isActive: true },
-  { id: "pos3", name: "Trưởng phòng xét nghiệm", code: "TPXN", description: "Trưởng phòng xét nghiệm", isActive: true },
-  { id: "pos4", name: "Trưởng nhóm", code: "TN", description: "Trưởng nhóm", isActive: true },
-  { id: "pos5", name: "Kỹ thuật viên", code: "KTV", description: "Kỹ thuật viên xét nghiệm", isActive: true },
-  { id: "pos6", name: "Quản lý chất lượng", code: "QLCL", description: "Quản lý chất lượng", isActive: true },
-  { id: "pos7", name: "Quản lý trang thiết bị", code: "QLTB", description: "Quản lý trang thiết bị", isActive: true },
-  { id: "pos8", name: "Quản trị viên", code: "Admin", description: "Quản trị hệ thống", isActive: true },
+  { id: "pos1", name: "Giám đốc", code: "VT001", departmentId: "d6", departmentName: "Ban Giám đốc", branchId: "b1", branchName: "LabHouse Central", description: "Giám đốc trung tâm", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "pos2", name: "Phó Giám đốc", code: "VT002", departmentId: "d6", departmentName: "Ban Giám đốc", branchId: "b1", branchName: "LabHouse Central", description: "Phó Giám đốc", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "pos3", name: "Trưởng phòng xét nghiệm", code: "VT003", departmentId: "d1", departmentName: "Huyết học", branchId: "b1", branchName: "LabHouse Central", description: "Trưởng phòng xét nghiệm", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "pos4", name: "Trưởng nhóm", code: "VT004", departmentId: "d1", departmentName: "Huyết học", branchId: "b1", branchName: "LabHouse Central", description: "Trưởng nhóm", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "pos5", name: "Kỹ thuật viên", code: "VT005", departmentId: "d1", departmentName: "Huyết học", branchId: "b1", branchName: "LabHouse Central", description: "Kỹ thuật viên xét nghiệm", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "pos6", name: "Quản lý chất lượng", code: "VT006", departmentId: "d7", departmentName: "Quản lý chất lượng", branchId: "b1", branchName: "LabHouse Central", description: "Quản lý chất lượng", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "pos7", name: "Quản lý trang thiết bị", code: "VT007", departmentId: "d8", departmentName: "Thiết bị", branchId: "b1", branchName: "LabHouse Central", description: "Quản lý trang thiết bị", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "pos8", name: "Quản trị viên", code: "VT008", departmentId: "d5", departmentName: "IT", branchId: "b1", branchName: "LabHouse Central", description: "Quản trị hệ thống", isActive: true, createdAt: "2023-01-01T00:00:00" },
 ];
 
 // ============ MOCK SUPPLIERS ============

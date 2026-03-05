@@ -65,7 +65,7 @@ interface DataContextValue {
   deleteCalibrationResult: (id: string) => Promise<void>;
 
   // History mutations
-  addHistory: (log: Omit<HistoryLog, "id">) => Promise<void>;
+  addHistory: (log: Record<string, any>) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -379,7 +379,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // History mutations
-  const addHistory = useCallback(async (log: Omit<HistoryLog, "id">) => {
+  const addHistory = useCallback(async (log: Record<string, any>) => {
     await apiFetch<HistoryLog>("/api/history", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

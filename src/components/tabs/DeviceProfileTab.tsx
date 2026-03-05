@@ -1569,7 +1569,16 @@ export default function DeviceProfileTab() {
 
   // Complete return acceptance - change status from "Tạm điều chuyển" to "Đang vận hành"
   const completeReturnAcceptance = (deviceId: string) => {
+    const device = devices.find(d => d.id === deviceId);
     updateDeviceStatus(deviceId, "Đang vận hành");
+    addHistory({
+      userId: user?.id ?? "",
+      userName: user?.fullName ?? "",
+      action: "Tiếp nhận thiết bị",
+      targetId: deviceId,
+      targetType: "Thiết bị",
+      details: `Tiếp nhận thiết bị ${device?.code ?? deviceId} - ${device?.name ?? ""} từ điều chuyển`,
+    });
     setEditingReturnForm(null);
     setActiveModal(null);
   };
@@ -1581,12 +1590,30 @@ export default function DeviceProfileTab() {
 
   // Handle transfer proposal approval
   const handleTransferApproval = (deviceId: string) => {
+    const device = devices.find(d => d.id === deviceId);
     updateDeviceStatus(deviceId, "Tạm điều chuyển");
+    addHistory({
+      userId: user?.id ?? "",
+      userName: user?.fullName ?? "",
+      action: "Phê duyệt điều chuyển",
+      targetId: deviceId,
+      targetType: "Điều chuyển",
+      details: `Phê duyệt điều chuyển thiết bị ${device?.code ?? deviceId} - ${device?.name ?? ""}`,
+    });
   };
 
   // Handle liquidation approval
   const handleLiquidationApproval = (deviceId: string) => {
+    const device = devices.find(d => d.id === deviceId);
     updateDeviceStatus(deviceId, "Ngừng sử dụng");
+    addHistory({
+      userId: user?.id ?? "",
+      userName: user?.fullName ?? "",
+      action: "Phê duyệt thanh lý",
+      targetId: deviceId,
+      targetType: "Thanh lý",
+      details: `Phê duyệt thanh lý thiết bị ${device?.code ?? deviceId} - ${device?.name ?? ""}`,
+    });
   };
   
   // Handle change manager

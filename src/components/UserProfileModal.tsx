@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useData } from "@/contexts/DataContext";
 import {
   X,
   User,
@@ -22,6 +23,7 @@ interface Props {
 export default function UserProfileModal({ onClose }: Props) {
   const { user, updateProfile, updatePassword } = useAuth();
   const { success, error } = useToast();
+  const { addHistory } = useData();
   const [activeTab, setActiveTab] = useState<"info" | "password">("info");
 
   // Info form
@@ -44,6 +46,14 @@ export default function UserProfileModal({ onClose }: Props) {
     }
     updateProfile({ fullName, email, phone });
     success("Cập nhật thành công", "Thông tin cá nhân đã được cập nhật");
+    addHistory({
+      userId: user?.id ?? "",
+      userName: user?.fullName ?? "",
+      action: "Cập nhật thông tin hồ sơ",
+      targetId: user?.id ?? "",
+      targetType: "Người dùng",
+      details: `Cập nhật thông tin cá nhân: ${fullName}`,
+    });
   };
 
   const handleChangePassword = async () => {
@@ -62,6 +72,14 @@ export default function UserProfileModal({ onClose }: Props) {
     const ok = await updatePassword(oldPass, newPass);
     if (ok) {
       success("Đổi mật khẩu thành công", "Mật khẩu của bạn đã được cập nhật");
+      addHistory({
+        userId: user?.id ?? "",
+        userName: user?.fullName ?? "",
+        action: "Đổi mật khẩu",
+        targetId: user?.id ?? "",
+        targetType: "Người dùng",
+        details: `Thay đổi mật khẩu`,
+      });
       setOldPass("");
       setNewPass("");
       setConfirmPass("");

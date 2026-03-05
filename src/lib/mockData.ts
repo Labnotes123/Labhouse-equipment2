@@ -1754,7 +1754,7 @@ export const mockUserProfiles: UserProfile[] = [
     fullName: "Trần Thị Giám Đốc",
     employeeId: "NV-002",
     phone: "0912345679",
-    email: "cong.le@gmail.com",
+    email: "cong.le@roche.com",
     position: "Giám đốc",
     department: "Ban Giám đốc",
     branch: "LabHouse Central",

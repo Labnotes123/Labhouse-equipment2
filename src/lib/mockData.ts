@@ -113,6 +113,7 @@ export interface AttachedFile {
 export interface ProposalApprover {
   userId: string;
   fullName: string;
+  email?: string; // Email để gửi thông báo
   role: string;
   isApprover: boolean; // true = can approve, false = related person only
 }
@@ -322,6 +323,8 @@ export interface SystemNotification {
   // Người nhận thông báo
   recipientId: string;
   recipientName: string;
+  // Email người nhận (để gửi notification)
+  recipientEmail?: string;
   // Legacy: userId for backward compatibility
   userId?: string;
   // Người tạo thông báo (có thể là hệ thống)
@@ -1614,13 +1617,13 @@ export const mockHistoryLogs: HistoryLog[] = [
 ];
 
 // Exported user list for approver selection
-export const MOCK_USERS_LIST = [
-  { id: "1", fullName: "Nguyễn Văn Admin", role: "Admin" },
-  { id: "2", fullName: "Trần Thị Giám Đốc", role: "Giám đốc" },
-  { id: "3", fullName: "Lê Văn Trưởng Phòng", role: "Trưởng phòng xét nghiệm" },
-  { id: "4", fullName: "Phạm Thị Kỹ Thuật", role: "Kỹ thuật viên" },
-  { id: "5", fullName: "Hoàng Văn Chất Lượng", role: "Quản lý chất lượng" },
-  { id: "6", fullName: "Vũ Thị Thiết Bị", role: "Quản lý trang thiết bị" },
+export const MOCK_USERS_LIST: { id: string; fullName: string; role: string; email?: string }[] = [
+  { id: "1", fullName: "Nguyễn Văn Admin", role: "Admin", email: "levancong.hmtu@gmail.com" },
+  { id: "2", fullName: "Trần Thị Giám Đốc", role: "Giám đốc", email: "cong.le@roche.com" },
+  { id: "3", fullName: "Lê Văn Trưởng Phòng", role: "Trưởng phòng xét nghiệm", email: "truongphong@labhouse.vn" },
+  { id: "4", fullName: "Phạm Thị Kỹ Thuật", role: "Kỹ thuật viên", email: "ktv@labhouse.vn" },
+  { id: "5", fullName: "Hoàng Văn Chất Lượng", role: "Quản lý chất lượng", email: "qlcl@labhouse.vn" },
+  { id: "6", fullName: "Vũ Thị Thiết Bị", role: "Quản lý trang thiết bị", email: "qltb@labhouse.vn" },
 ];
 
 export const departments = [

@@ -383,6 +383,7 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       userId: a.userId,
       recipientId: a.userId,
       recipientName: a.fullName,
+      recipientEmail: a.email, // Include email for sending notifications
       priority: a.isApprover ? "high" : "medium",
       type: a.isApprover ? "approval_request" : "system",
       title: a.isApprover ? "Yêu cầu phê duyệt mới" : "Bạn được liệt kê là người liên quan",
@@ -394,6 +395,19 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       isRead: false,
       createdAt: new Date().toISOString(),
     }));
+    
+    // Send notifications via API (which will also send emails)
+    newNotifs.forEach(async (notif) => {
+      try {
+        await fetch("/api/notifications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(notif),
+        });
+      } catch (e) {
+        console.error("Failed to create notification:", e);
+      }
+    });
     setNotifications((prev) => [...prev, ...newNotifs]);
     success("Đã gửi đề xuất", `Phiếu ${proposal.proposalCode} đã được gửi chờ duyệt`);
     setShowApproverSelect(false);
@@ -411,11 +425,13 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
     updateProposal(p.id, updates).catch(console.error);
     // Notify proposer
     const proposer = mockUserProfiles.find(u => u.id === p.proposedById);
+    const proposerEmail = MOCK_USERS_LIST.find(u => u.id === p.proposedById)?.email;
     const notif: SystemNotification = {
       id: `n-${Date.now()}`,
       userId: p.proposedById,
       recipientId: p.proposedById,
       recipientName: proposer?.fullName || "",
+      recipientEmail: proposerEmail,
       priority: "medium",
       type: "approval_approved",
       title: "Đề xuất đã được phê duyệt",
@@ -425,6 +441,12 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       isRead: false,
       createdAt: new Date().toISOString(),
     };
+    // Send notification via API
+    fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(notif),
+    }).catch(e => console.error("Failed to create notification:", e));
     setNotifications((prev) => [...prev, notif]);
     success("Đã phê duyệt", `Phiếu ${p.proposalCode} đã được phê duyệt`);
     setApproveProposal(null);
@@ -439,11 +461,13 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
     );
     updateProposal(rejectProposal.id, updates).catch(console.error);
     const proposer = mockUserProfiles.find(u => u.id === rejectProposal.proposedById);
+    const proposerEmail = MOCK_USERS_LIST.find(u => u.id === rejectProposal.proposedById)?.email;
     const notif: SystemNotification = {
       id: `n-${Date.now()}`,
       userId: rejectProposal.proposedById,
       recipientId: rejectProposal.proposedById,
       recipientName: proposer?.fullName || "",
+      recipientEmail: proposerEmail,
       priority: "high",
       type: "approval_rejected",
       title: "Đề xuất bị từ chối",
@@ -453,6 +477,12 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       isRead: false,
       createdAt: new Date().toISOString(),
     };
+    // Send notification via API
+    fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(notif),
+    }).catch(e => console.error("Failed to create notification:", e));
     setNotifications((prev) => [...prev, notif]);
     error("Đã từ chối", `Phiếu ${rejectProposal.proposalCode} đã bị từ chối`);
     setRejectProposal(null);
@@ -508,7 +538,7 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
         }
         return prev.map((a) => a.userId === u.id ? { ...a, isApprover } : a);
       }
-      return [...prev, { userId: u.id, fullName: u.fullName, role: u.role, isApprover }];
+      return [...prev, { userId: u.id, fullName: u.fullName, email: u.email, role: u.role, isApprover }];
     });
   };
 

@@ -1769,6 +1769,15 @@ export default function AdminTab() {
   const renderBackupSection = () => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const { devices, schedules, incidents, proposals, calibrationRequests, calibrationResults } = useData();
+    
+    // Get additional data from localStorage
+    const getStoredData = () => {
+      const users = JSON.parse(localStorage.getItem('mockUserProfiles') || '[]');
+      const branches = JSON.parse(localStorage.getItem('mockBranches') || '[]');
+      const positions = JSON.parse(localStorage.getItem('mockPositions') || '[]');
+      const suppliers = JSON.parse(localStorage.getItem('mockSuppliers') || '[]');
+      return { users, branches, positions, suppliers };
+    };
 
     // Handle create backup
     const handleCreateBackup = async () => {
@@ -1779,6 +1788,7 @@ export default function AdminTab() {
       
       setBackupLoading(true);
       try {
+        const { users, branches, positions, suppliers } = getStoredData();
         const data = {
           devices: devices || [],
           schedules: schedules || [],
@@ -1786,6 +1796,10 @@ export default function AdminTab() {
           proposals: proposals || [],
           calibrationRequests: calibrationRequests || [],
           calibrationResults: calibrationResults || [],
+          users: users,
+          branches: branches,
+          positions: positions,
+          suppliers: suppliers,
         };
 
         const { blob, data: backupData } = await createBackup(data, user.fullName);
@@ -2157,6 +2171,36 @@ export default function AdminTab() {
     );
   };
 
+  const handleDeleteHistoryNow = () => {
+    // Implement manual history deletion
+    const allData = localStorage.getItem('labhouse_data');
+    if (allData) {
+      try {
+        const parsed = JSON.parse(allData);
+        const originalCount = parsed.history?.length || 0;
+        // Keep only last N records based on config
+        const daysToKeep = historyConfig.deleteAfterDays;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+        
+        if (parsed.history && Array.isArray(parsed.history)) {
+          const filteredHistory = parsed.history.filter((log: any) => {
+            const logDate = new Date(log.timestamp);
+            return logDate > cutoffDate;
+          });
+          parsed.history = filteredHistory;
+          localStorage.setItem('labhouse_data', JSON.stringify(parsed));
+          success('Thành công', `Đã xóa ${originalCount - filteredHistory.length} bản ghi lịch sử`);
+        }
+        setHistoryConfig({ ...historyConfig, lastAutoDelete: new Date().toLocaleString('vi-VN') });
+      } catch (err) {
+        error('Lỗi', 'Không thể xóa lịch sử');
+      }
+    } else {
+      success('Thông báo', 'Chưa có dữ liệu lịch sử để xóa');
+    }
+  };
+
   const renderHistoryConfigSection = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
@@ -2216,10 +2260,7 @@ export default function AdminTab() {
                 </p>
               </div>
               <button
-                onClick={() => {
-                  setHistoryConfig({ ...historyConfig, lastAutoDelete: new Date().toLocaleString("vi-VN") });
-                  info("Xóa thủ công", "Tính năng đang được phát triển");
-                }}
+                onClick={handleDeleteHistoryNow}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm"
                 style={{ background: "linear-gradient(135deg, #64748b, #475569)" }}
               >

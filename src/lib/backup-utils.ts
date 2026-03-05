@@ -15,10 +15,10 @@ export interface BackupData {
     proposals?: any[];
     calibrationRequests?: any[];
     calibrationResults?: any[];
+    users?: any[];
     branches?: any[];
     positions?: any[];
     suppliers?: any[];
-    users?: any[];
   };
 }
 
@@ -48,6 +48,10 @@ export async function createBackup(
     proposals?: any[];
     calibrationRequests?: any[];
     calibrationResults?: any[];
+    users?: any[];
+    branches?: any[];
+    positions?: any[];
+    suppliers?: any[];
   },
   userName: string
 ): Promise<{ blob: Blob; data: BackupData }> {
@@ -61,7 +65,11 @@ export async function createBackup(
       (data.incidents?.length || 0) +
       (data.proposals?.length || 0) +
       (data.calibrationRequests?.length || 0) +
-      (data.calibrationResults?.length || 0),
+      (data.calibrationResults?.length || 0) +
+      (data.users?.length || 0) +
+      (data.branches?.length || 0) +
+      (data.positions?.length || 0) +
+      (data.suppliers?.length || 0),
     data: data,
   };
 

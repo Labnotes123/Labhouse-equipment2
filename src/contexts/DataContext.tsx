@@ -194,6 +194,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshData();
+    
+    // Check for restore data on mount
+    const restoreData = localStorage.getItem('labhouse_restore_data');
+    if (restoreData) {
+      try {
+        const parsed = JSON.parse(restoreData);
+        // Restore data from backup
+        if (parsed.devices) setDevices(parsed.devices);
+        if (parsed.proposals) setProposals(parsed.proposals);
+        if (parsed.incidents) setIncidents(parsed.incidents);
+        if (parsed.schedules) setSchedules(parsed.schedules);
+        if (parsed.calibrationRequests) setCalibrationRequests(parsed.calibrationRequests);
+        if (parsed.calibrationResults) setCalibrationResults(parsed.calibrationResults);
+        if (parsed.history) setHistory(parsed.history);
+        // Clear restore data after successful restore
+        localStorage.removeItem('labhouse_restore_data');
+        console.log('Data restored successfully');
+      } catch (err) {
+        console.error('Failed to restore data:', err);
+        localStorage.removeItem('labhouse_restore_data');
+      }
+    }
   }, [refreshData]);
 
   const loading =

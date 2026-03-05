@@ -575,6 +575,8 @@ export default function AdminTab() {
 
   // ============ HISTORY CONFIG ============
   const handleSaveHistoryConfig = () => {
+    // Save to localStorage for persistence
+    localStorage.setItem('history_config', JSON.stringify(historyConfig));
     success("Đã lưu", "Cấu hình lịch sử đã được lưu");
   };
 

@@ -1,9 +1,7 @@
 /**
  * Excel Export utility functions for LabHouse Equipment Management System
- * Client-side only - uses browser APIs for Excel/CSV generation
+ * Uses client-side only APIs
  */
-
-"use client";
 
 import type { NewDeviceProposal } from "./mockData";
 
@@ -55,9 +53,11 @@ function getAttachmentsString(proposal: NewDeviceProposal): string {
 }
 
 /**
- * Export proposals to CSV/Excel format
+ * Export proposals to CSV/Excel format - async version
  */
-export function exportProposalsToExcel(proposals: NewDeviceProposal[]): void {
+export async function exportProposalsToExcel(proposals: NewDeviceProposal[]): Promise<void> {
+  console.log("[Excel Export] Starting export, proposals count:", proposals.length);
+  
   // CSV header
   const headers = [
     "Mã phiếu",
@@ -103,4 +103,6 @@ export function exportProposalsToExcel(proposals: NewDeviceProposal[]): void {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  
+  console.log("[Excel Export] Completed, exported", proposals.length, "proposals");
 }

@@ -1,12 +1,8 @@
 /**
  * PDF Export utility functions for LabHouse Equipment Management System
- * Client-side only - uses browser APIs for PDF generation
+ * Uses dynamic import to ensure client-side only execution
  */
 
-"use client";
-
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import type { NewDeviceProposal, DeviceRequirement, AttachedFile } from "./mockData";
 
 /**
@@ -49,9 +45,15 @@ function collectAttachments(proposal: NewDeviceProposal): { name: string; url: s
 }
 
 /**
- * Export proposal to PDF
+ * Export proposal to PDF - uses dynamic import for jsPDF
  */
-export function exportProposalToPDF(proposal: NewDeviceProposal): void {
+export async function exportProposalToPDF(proposal: NewDeviceProposal): Promise<void> {
+  console.log("[PDF Export] Starting export for proposal:", proposal.proposalCode);
+  
+  // Dynamic import to ensure client-side only execution
+  const { jsPDF } = await import("jspdf");
+  const autoTable = (await import("jspdf-autotable")).default;
+  
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
@@ -201,4 +203,5 @@ export function exportProposalToPDF(proposal: NewDeviceProposal): void {
   
   // Save the PDF
   doc.save(`${proposal.proposalCode}.pdf`);
+  console.log("[PDF Export] Completed for proposal:", proposal.proposalCode);
 }

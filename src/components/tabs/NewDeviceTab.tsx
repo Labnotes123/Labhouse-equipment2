@@ -153,7 +153,7 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
   const { user } = useAuth();
   const { success, error, info } = useToast();
 
-  const { proposals: contextProposals, addProposal, updateProposal } = useData();
+  const { proposals: contextProposals, addProposal, updateProposal, addHistory } = useData();
   // ── State ──
   const [proposals, setProposals] = useState<NewDeviceProposal[]>([]);
   useEffect(() => { setProposals(contextProposals); }, [contextProposals]);
@@ -409,6 +409,20 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       }
     });
     setNotifications((prev) => [...prev, ...newNotifs]);
+    // Add history log
+    addHistory({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: user?.id || "",
+      userName: user?.fullName || "",
+      userRole: user?.role || "",
+      action: "Gửi đề xuất mới",
+      description: `Gửi phiếu đề xuất ${proposal.proposalCode} chờ phê duyệt`,
+      targetType: "Đề xuất",
+      targetId: proposal.id,
+      targetName: proposal.proposalCode,
+      timestamp: new Date().toISOString(),
+    }).catch(console.error);
     success("Đã gửi đề xuất", `Phiếu ${proposal.proposalCode} đã được gửi chờ duyệt`);
     setShowApproverSelect(false);
     setShowForm(false);
@@ -448,6 +462,20 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       body: JSON.stringify(notif),
     }).catch(e => console.error("Failed to create notification:", e));
     setNotifications((prev) => [...prev, notif]);
+    // Add history log
+    addHistory({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: user?.id || "",
+      userName: user?.fullName || "",
+      userRole: user?.role || "",
+      action: "Phê duyệt đề xuất",
+      description: `Phê duyệt phiếu đề xuất ${p.proposalCode}`,
+      targetType: "Đề xuất",
+      targetId: p.id,
+      targetName: p.proposalCode,
+      timestamp: new Date().toISOString(),
+    }).catch(console.error);
     success("Đã phê duyệt", `Phiếu ${p.proposalCode} đã được phê duyệt`);
     setApproveProposal(null);
   };
@@ -484,6 +512,20 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       body: JSON.stringify(notif),
     }).catch(e => console.error("Failed to create notification:", e));
     setNotifications((prev) => [...prev, notif]);
+    // Add history log
+    addHistory({
+      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+      actionNumber: Date.now(),
+      userId: user?.id || "",
+      userName: user?.fullName || "",
+      userRole: user?.role || "",
+      action: "Từ chối đề xuất",
+      description: `Từ chối phiếu đề xuất ${rejectProposal.proposalCode}. Lý do: ${rejectReason}`,
+      targetType: "Đề xuất",
+      targetId: rejectProposal.id,
+      targetName: rejectProposal.proposalCode,
+      timestamp: new Date().toISOString(),
+    }).catch(console.error);
     error("Đã từ chối", `Phiếu ${rejectProposal.proposalCode} đã bị từ chối`);
     setRejectProposal(null);
     setRejectReason("");

@@ -23,6 +23,7 @@ import {
 import { formatDate, mockTransferProposals, mockLiquidationProposals } from "@/lib/mockData";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Types for the unified approval system
 interface UnifiedApprovalItem {
@@ -38,6 +39,7 @@ interface UnifiedApprovalItem {
 
 export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigateNewDevicePending?: () => void }) {
   const { info, success, error: showError } = useToast();
+  const { user } = useAuth();
   const { 
     proposals: mockProposals, 
     incidents: mockIncidents, 
@@ -46,6 +48,7 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
     updateProposal,
     updateIncident,
     updateSchedule,
+    addHistory,
   } = useData();
   
   const [activeFilter, setActiveFilter] = useState<"all" | "TB_Mới" | "Sự_cố" | "Hiệu_chuẩn" | "Điều_chuyển" | "Thanh_lý">("all");
@@ -267,6 +270,26 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
           status: "Đã hoàn thành" 
         });
       }
+      // Add history log
+      const actionMap: Record<string, string> = {
+        "TB_Mới": "Phê duyệt đề xuất thiết bị mới",
+        "Sự_cố": "Phê duyệt báo cáo sự cố",
+        "Hiệu_chuẩn": "Phê duyệt yêu cầu hiệu chuẩn",
+        "Bảo_dưỡng": "Phê duyệt yêu cầu bảo dưỡng",
+      };
+      await addHistory({
+        actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+        actionNumber: Date.now(),
+        userId: user?.id || "",
+        userName: user?.fullName || "",
+        userRole: user?.role || "",
+        action: actionMap[item.type] || "Phê duyệt",
+        description: `${actionMap[item.type] || "Phê duyệt"} ${item.code}`,
+        targetType: item.type === "TB_Mới" ? "Đề xuất" : item.type === "Sự_cố" ? "Sự cố" : "Lịch",
+        targetId: item.id,
+        targetName: item.code,
+        timestamp: new Date().toISOString(),
+      });
       success("Phê duyệt thành công");
     } catch (err) {
       showError("Lỗi khi phê duyệt");
@@ -290,6 +313,24 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
           rejectedReason: reason,
         });
       }
+      // Add history log
+      const rejectActionMap: Record<string, string> = {
+        "TB_Mới": "Từ chối đề xuất thiết bị mới",
+        "Sự_cố": "Từ chối báo cáo sự cố",
+      };
+      await addHistory({
+        actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+        actionNumber: Date.now(),
+        userId: user?.id || "",
+        userName: user?.fullName || "",
+        userRole: user?.role || "",
+        action: rejectActionMap[item.type] || "Từ chối",
+        description: `${rejectActionMap[item.type] || "Từ chối"} ${item.code}. Lý do: ${reason}`,
+        targetType: item.type === "TB_Mới" ? "Đề xuất" : "Sự cố",
+        targetId: item.id,
+        targetName: item.code,
+        timestamp: new Date().toISOString(),
+      });
       success("Đã từ chối");
     } catch (err) {
       showError("Lỗi khi từ chối");

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Notification } from "@/lib/mockData";
+import { sendApprovalRequestEmail, sendApprovalResultEmail, isEmailConfigured } from "@/lib/email-service";
+import { MOCK_USERS_LIST } from "@/lib/mockData";
 
 // In-memory storage for notifications (in a real app, this would be a database)
 let notifications: Notification[] = [];
@@ -87,6 +89,42 @@ export async function POST(request: Request) {
     };
 
     notifications.push(notification);
+
+    // Send email notification if email service is configured
+    if (isEmailConfigured()) {
+      try {
+        // Try to get email from body first, then fallback to MOCK_USERS_LIST
+        const recipientEmail = body.recipientEmail || body.email;
+        
+        if (recipientEmail) {
+          switch (type) {
+            case "approval_request":
+              await sendApprovalRequestEmail({
+                to: recipientEmail,
+                recipientName: recipientName,
+                requestCode: relatedCode || "",
+                requestType: relatedType || "proposal",
+                requesterName: senderName || "",
+              });
+              break;
+            case "approval_approved":
+            case "approval_rejected":
+              await sendApprovalResultEmail({
+                to: recipientEmail,
+                recipientName: recipientName,
+                requestCode: relatedCode || "",
+                requestType: relatedType || "proposal",
+                approverName: senderName || "",
+                approved: type === "approval_approved",
+              });
+              break;
+          }
+        }
+      } catch (emailError) {
+        console.error("Failed to send email notification:", emailError);
+        // Continue - notification was created successfully even if email failed
+      }
+    }
 
     return NextResponse.json(notification, { status: 201 });
   } catch (error) {

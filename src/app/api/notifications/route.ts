@@ -92,9 +92,13 @@ export async function POST(request: Request) {
 
     // Send email notification if email service is configured
     if (isEmailConfigured()) {
+      console.log("📧 Email service is configured, attempting to send email...");
       try {
         // Try to get email from body first, then fallback to MOCK_USERS_LIST
         const recipientEmail = body.recipientEmail || body.email;
+        
+        console.log("   Recipient email:", recipientEmail);
+        console.log("   Notification type:", type);
         
         if (recipientEmail) {
           switch (type) {

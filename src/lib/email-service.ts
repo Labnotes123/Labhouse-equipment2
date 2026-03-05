@@ -27,6 +27,17 @@ const defaultConfig: EmailConfig = {
   fromName: process.env.SMTP_FROM_NAME || "LabHouse Equipment Management",
 };
 
+// Debug: Log email config status on startup
+if (typeof window === 'undefined') {
+  const isConfigured = !!(defaultConfig.auth.user && defaultConfig.auth.pass);
+  console.log(`📧 Email service config check:`);
+  console.log(`   - SMTP_HOST: ${defaultConfig.host}`);
+  console.log(`   - SMTP_PORT: ${defaultConfig.port}`);
+  console.log(`   - SMTP_USER: ${defaultConfig.auth.user ? '✓ set' : '✗ NOT SET'}`);
+  console.log(`   - SMTP_PASS: ${defaultConfig.auth.pass ? '✓ set (16 chars)' : '✗ NOT SET'}`);
+  console.log(`   - Email configured: ${isConfigured ? '✓ YES' : '✗ NO'}`);
+}
+
 // Create transporter singleton
 let transporter: Transporter | null = null;
 
@@ -92,6 +103,10 @@ export async function sendEmail(params: SendEmailParams): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("❌ Failed to send email:", error);
+    if (error instanceof Error) {
+      console.error("   Error name:", error.name);
+      console.error("   Error message:", error.message);
+    }
     return false;
   }
 }

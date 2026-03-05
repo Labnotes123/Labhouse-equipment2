@@ -54,6 +54,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { MOCK_USERS_LIST, mockUserProfiles } from "@/lib/mockData";
+import { exportProposalToPDF } from "@/lib/pdf-export";
 
 // Type alias for backward compatibility
 type Notification = SystemNotification;
@@ -593,9 +594,14 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
     info("Xuất Excel", "Đang xuất file Excel...");
   };
 
-  // Export PDF (mock)
+  // Export PDF with full proposal details and attachments list
   const handleExportPDF = (p: NewDeviceProposal) => {
-    info("Xuất PDF", `Đang xuất phiếu ${p.proposalCode} sang PDF...`);
+    try {
+      exportProposalToPDF(p);
+      info("Xuất PDF", `Đã xuất phiếu ${p.proposalCode} thành công`);
+    } catch (err) {
+      error("Lỗi khi xuất PDF");
+    }
   };
 
   // Status config

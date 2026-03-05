@@ -592,21 +592,33 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
 
   // Export Excel with all proposals data
   const handleExportExcel = () => {
+    console.log("[Excel Export] Starting export, proposals count:", proposals.length);
+    if (!proposals || proposals.length === 0) {
+      info("Không có dữ liệu", "Không có phiếu đề xuất nào để xuất Excel");
+      return;
+    }
     try {
       exportProposalsToExcel(proposals);
       info("Xuất Excel", `Đã xuất ${proposals.length} phiếu đề xuất thành công`);
     } catch (err) {
-      error("Lỗi khi xuất Excel");
+      console.error("[Excel Export] Error:", err);
+      error("Lỗi khi xuất Excel", err instanceof Error ? err.message : "Unknown error");
     }
   };
 
   // Export PDF with full proposal details and attachments list
   const handleExportPDF = (p: NewDeviceProposal) => {
+    console.log("[PDF Export] Starting export for proposal:", p.proposalCode);
+    if (!p) {
+      error("Lỗi khi xuất PDF", "Không có dữ liệu phiếu đề xuất");
+      return;
+    }
     try {
       exportProposalToPDF(p);
       info("Xuất PDF", `Đã xuất phiếu ${p.proposalCode} thành công`);
     } catch (err) {
-      error("Lỗi khi xuất PDF");
+      console.error("[PDF Export] Error:", err);
+      error("Lỗi khi xuất PDF", err instanceof Error ? err.message : "Unknown error");
     }
   };
 

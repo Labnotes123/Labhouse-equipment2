@@ -1076,7 +1076,7 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
                             <div key={f.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-700">
                               <FileText size={12} />
                               <span className="max-w-32 truncate">{f.name}</span>
-                              <button onClick={() => handleRemoveAttachment(dev.id, f.id)} className="hover:text-red-900">
+                              <button onClick={() => handleRemoveAttachment(dev.id, f.id || "")} className="hover:text-red-900">
                                 <X size={11} />
                               </button>
                             </div>

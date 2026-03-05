@@ -103,9 +103,9 @@ export interface DeviceRequirement {
 }
 
 export interface AttachedFile {
-  id: string;
+  id?: string;
   name: string;
-  type: "pdf" | "image" | "doc";
+  type: string; // MIME type or 'pdf' | 'image' | 'doc'
   url: string; // base64 or object URL
   size: number;
 }
@@ -337,6 +337,7 @@ export interface Device {
   yearOfManufacture: string; // Năm sản xuất
   distributor: string; // Nhà phân phối
   managerHistory: DeviceManagerHistory[]; // Người phụ trách (current + history)
+  users: string[]; // Người sử dụng thiết bị (được cấp quyền sau đào tạo)
   usageStartDate: string; // Thời gian bắt đầu sử dụng
   usageTime: string; // Thời gian sử dụng (e.g., "08:00 - 17:00 (8 giờ)")
   installationLocation: string; // Vị trí lắp đặt
@@ -390,7 +391,8 @@ export const mockDevices: Device[] = [
     countryOfOrigin: "Nhật Bản",
     yearOfManufacture: "2021",
     distributor: "Công ty TNHH Thiết bị Y tế ABC",
-    managerHistory: [
+    users: [],
+      managerHistory: [
       { userId: "4", fullName: "Phạm Thị Kỹ Thuật", startDate: "2021-03-15", isCurrent: true }
     ],
     usageStartDate: "2021-03-15",
@@ -428,7 +430,8 @@ export const mockDevices: Device[] = [
     countryOfOrigin: "Hoa Kỳ",
     yearOfManufacture: "2020",
     distributor: "Công ty CP Thiết bị Y tế XYZ",
-    managerHistory: [
+    users: [],
+      managerHistory: [
       { userId: "1", fullName: "Nguyễn Văn Admin", startDate: "2020-06-20", isCurrent: true }
     ],
     usageStartDate: "2020-06-20",
@@ -466,7 +469,8 @@ export const mockDevices: Device[] = [
     countryOfOrigin: "Hoa Kỳ",
     yearOfManufacture: "2022",
     distributor: "Công ty TNHH Dược phẩm DEF",
-    managerHistory: [
+    users: [],
+      managerHistory: [
       { userId: "6", fullName: "Vũ Thị Thiết Bị", startDate: "2022-01-10", isCurrent: true }
     ],
     usageStartDate: "2022-01-10",
@@ -504,7 +508,8 @@ export const mockDevices: Device[] = [
     countryOfOrigin: "Hoa Kỳ",
     yearOfManufacture: "2021",
     distributor: "Công ty TNHH Thiết bị Y tế GHI",
-    managerHistory: [
+    users: [],
+      managerHistory: [
       { userId: "5", fullName: "Hoàng Văn Chất Lượng", startDate: "2021-09-05", isCurrent: true }
     ],
     usageStartDate: "2021-09-05",
@@ -542,7 +547,8 @@ export const mockDevices: Device[] = [
     countryOfOrigin: "Đức",
     yearOfManufacture: "2023",
     distributor: "Công ty TNHH JKL",
-    managerHistory: [
+    users: [],
+      managerHistory: [
       { userId: "3", fullName: "Lê Văn Trưởng Phòng", startDate: "2023-03-20", isCurrent: true }
     ],
     usageStartDate: "2023-03-20",
@@ -578,7 +584,8 @@ export const mockDevices: Device[] = [
     countryOfOrigin: "Hoa Kỳ",
     yearOfManufacture: "2022",
     distributor: "Công ty MNO",
-    managerHistory: [
+    users: [],
+      managerHistory: [
       { userId: "6", fullName: "Vũ Thị Thiết Bị", startDate: "2022-07-15", isCurrent: true }
     ],
     usageStartDate: "2022-07-15",
@@ -2108,6 +2115,186 @@ export interface TrainingProposal {
   createdAt: string;
   updatedAt?: string;
 }
+
+// ============ TRAINING MODULE TYPES ============
+
+export type TrainingPlanStatus = "Nháp" | "Chờ duyệt" | "Đã duyệt" | "Từ chối" | "Hoàn thành";
+export type InstructorType = "Chuyên gia Hãng" | "KTV trưởng" | "Nội bộ";
+export type TraineeResultStatus = "Chưa đánh giá" | "Đạt" | "Không đạt";
+
+export interface TrainingTrainee {
+  userId: string;
+  fullName: string;
+  employeeId: string;
+  department: string;
+  result: TraineeResultStatus;
+  resultFile?: AttachedFile;
+  completedAt?: string;
+}
+
+export interface TrainingPlan {
+  id: string;
+  planCode: string; // PDT-2026-003
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  topic: string;
+  instructorType: InstructorType;
+  instructorName: string;
+  trainingDate: string;
+  trainingTime?: string;
+  location: string;
+  trainees: TrainingTrainee[];
+  approver: string;
+  status: TrainingPlanStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy: string;
+}
+
+export interface TrainingDocument {
+  id: string;
+  deviceId: string;
+  documentCode: string;
+  documentName: string;
+  documentType: "Slide" | "User Manual" | "SOP" | "Chứng chỉ" | "Khác";
+  description?: string;
+  file: AttachedFile;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+export interface TrainingResult {
+  id: string;
+  planId: string;
+  planCode: string;
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  trainingDate: string;
+  instructorName: string;
+  location: string;
+  attendees: TrainingTrainee[];
+  attendanceFile?: AttachedFile;
+  certificateFile?: AttachedFile;
+  notes?: string;
+  recordedBy: string;
+  recordedAt: string;
+}
+
+export const mockTrainingPlans: TrainingPlan[] = [
+  {
+    id: "tp1",
+    planCode: "PDT-2026-001",
+    deviceId: "d1",
+    deviceCode: "TB-001",
+    deviceName: "Máy phân tích huyết học tự động",
+    topic: "Hướng dẫn sử dụng và bảo trì cơ bản",
+    instructorType: "Chuyên gia Hãng",
+    instructorName: "Kỹ sư Sysmex - Nguyễn Văn A",
+    trainingDate: "2026-04-20",
+    trainingTime: "09:00",
+    location: "Phòng Hội trường - Tầng 2",
+    trainees: [
+      { userId: "u2", fullName: "Nguyễn Văn B", employeeId: "NV002", department: "Phòng Xét nghiệm", result: "Đạt" },
+      { userId: "u3", fullName: "Trần Thị C", employeeId: "NV003", department: "Phòng Xét nghiệm", result: "Đạt" },
+      { userId: "u4", fullName: "Lê Văn D", employeeId: "NV004", department: "Phòng Xét nghiệm", result: "Chưa đánh giá" },
+    ],
+    approver: "Lê Văn Trưởng Phòng",
+    status: "Đã duyệt",
+    createdAt: "2026-03-10T08:00:00",
+    createdBy: "admin",
+  },
+  {
+    id: "tp2",
+    planCode: "PDT-2026-002",
+    deviceId: "d2",
+    deviceCode: "TB-002",
+    deviceName: "Máy sinh hóa tự động",
+    topic: "Đào tạo nâng cao - Xử lý lỗi và bảo dưỡng",
+    instructorType: "KTV trưởng",
+    instructorName: "Trần Văn Trưởng nhóm",
+    trainingDate: "2026-05-15",
+    trainingTime: "14:00",
+    location: "Khu vực máy - Tầng 1",
+    trainees: [
+      { userId: "u2", fullName: "Nguyễn Văn B", employeeId: "NV002", department: "Phòng Hóa sinh", result: "Chưa đánh giá" },
+    ],
+    approver: "Trần Thị Giám Đốc",
+    status: "Chờ duyệt",
+    createdAt: "2026-02-28T14:00:00",
+    createdBy: "admin",
+  },
+];
+
+export const mockTrainingDocuments: TrainingDocument[] = [
+  {
+    id: "td1",
+    deviceId: "d1",
+    documentCode: "DOC-TB001-001",
+    documentName: "Hướng dẫn sử dụng máy phân tích huyết học Sysmex XN-1000",
+    documentType: "User Manual",
+    description: "Manual hướng dẫn sử dụng chi tiết từng tính năng",
+    file: { name: "Sysmex_XN1000_User_Manual.pdf", url: "#", size: 5242880, type: "application/pdf" },
+    uploadedBy: "admin",
+    uploadedAt: "2026-01-15T10:00:00",
+  },
+  {
+    id: "td2",
+    deviceId: "d1",
+    documentCode: "DOC-TB001-002",
+    documentName: "SOP Vận hành máy phân tích huyết học",
+    documentType: "SOP",
+    description: "Quy trình vận hành chuẩn (Standard Operating Procedure)",
+    file: { name: "SOP_May_Huyet_Hoc.pdf", url: "#", size: 1048576, type: "application/pdf" },
+    uploadedBy: "admin",
+    uploadedAt: "2026-01-15T11:00:00",
+  },
+  {
+    id: "td3",
+    deviceId: "d1",
+    documentCode: "DOC-TB001-003",
+    documentName: "Slide buổi đào tạo ngày 20/04/2026",
+    documentType: "Slide",
+    description: "Bài giảng PowerPoint từ buổi đào tạo",
+    file: { name: "Slide_Dao_Tao_20_04.pptx", url: "#", size: 8388608, type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
+    uploadedBy: "admin",
+    uploadedAt: "2026-04-20T17:00:00",
+  },
+  {
+    id: "td4",
+    deviceId: "d2",
+    documentCode: "DOC-TB002-001",
+    documentName: "Hướng dẫn sử dụng máy sinh hóa Beckman Coulter",
+    documentType: "User Manual",
+    description: "Manual vận hành máy",
+    file: { name: "Beckman_Coulter_Manual.pdf", url: "#", size: 6291456, type: "application/pdf" },
+    uploadedBy: "admin",
+    uploadedAt: "2026-02-01T09:00:00",
+  },
+];
+
+export const mockTrainingResults: TrainingResult[] = [
+  {
+    id: "trs1",
+    planId: "tp1",
+    planCode: "PDT-2026-001",
+    deviceId: "d1",
+    deviceCode: "TB-001",
+    deviceName: "Máy phân tích huyết học tự động",
+    trainingDate: "2026-04-20",
+    instructorName: "Kỹ sư Sysmex - Nguyễn Văn A",
+    location: "Phòng Hội trường - Tầng 2",
+    attendees: [
+      { userId: "u2", fullName: "Nguyễn Văn B", employeeId: "NV002", department: "Phòng Xét nghiệm", result: "Đạt" },
+      { userId: "u3", fullName: "Trần Thị C", employeeId: "NV003", department: "Phòng Xét nghiệm", result: "Đạt" },
+    ],
+    attendanceFile: { name: "Diem_danh_PDT-2026-001.pdf", url: "#", size: 512000, type: "application/pdf" },
+    recordedBy: "admin",
+    recordedAt: "2026-04-20T18:00:00",
+  },
+];
 
 export const mockTrainingProposals: TrainingProposal[] = [
   {

@@ -181,7 +181,7 @@ export function ReturnAcceptanceSection({
                     <div className="flex items-center gap-1">
                       <button onClick={() => onViewAttachment(file)} className="p-1 rounded hover:bg-slate-200"><Eye size={13} /></button>
                       <button onClick={() => onDownloadAttachment(file)} className="p-1 rounded hover:bg-slate-200"><Download size={13} /></button>
-                      <button onClick={() => onRemoveHandoverFile(file.id)} className="p-1 rounded hover:bg-slate-200 text-red-500"><Trash2 size={13} /></button>
+                      <button onClick={() => onRemoveHandoverFile(file.id || "")} className="p-1 rounded hover:bg-slate-200 text-red-500"><Trash2 size={13} /></button>
                     </div>
                   </div>
                 ))}

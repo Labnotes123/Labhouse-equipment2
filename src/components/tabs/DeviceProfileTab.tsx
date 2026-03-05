@@ -106,6 +106,12 @@ import {
   AttachedFile,
   mockUserProfiles,
   UserProfile,
+  TrainingPlan,
+  TrainingDocument,
+  TrainingResult,
+  mockTrainingPlans,
+  mockTrainingDocuments,
+  mockTrainingResults,
 } from "@/lib/mockData";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -150,22 +156,6 @@ export interface LiquidationProposal {
   estimatedValue: string;
   plannedDate: string;
   requestedBy: string;
-  approver: string;
-  status: WorkflowStatus;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface TrainingProposal {
-  id: string;
-  trainingCode: string;
-  deviceId: string;
-  deviceCode: string;
-  deviceName: string;
-  topic: string;
-  trainer: string;
-  traineeGroup: string;
-  plannedDate: string;
   approver: string;
   status: WorkflowStatus;
   createdAt: string;
@@ -370,38 +360,6 @@ const mockLiquidationProposals: LiquidationProposal[] = [
   },
 ];
 
-const mockTrainingProposals: TrainingProposal[] = [
-  {
-    id: "dt1",
-    trainingCode: "DT-2026-001",
-    deviceId: "d1",
-    deviceCode: "TB-001",
-    deviceName: "Máy phân tích huyết học tự động",
-    topic: "Đào tạo vận hành chuẩn và xử trí lỗi thường gặp",
-    trainer: "Kỹ sư Nguyễn Văn A",
-    traineeGroup: "KTV Huyết học - Ca sáng",
-    plannedDate: "2026-03-08",
-    approver: "Lê Văn Trưởng Phòng",
-    status: "Chờ duyệt",
-    createdAt: "2026-03-01T10:00:00",
-  },
-  {
-    id: "dt2",
-    trainingCode: "DT-2026-002",
-    deviceId: "d4",
-    deviceCode: "TB-004",
-    deviceName: "Máy PCR Real-time",
-    topic: "Đào tạo kiểm soát chất lượng nội bộ theo CLSI EP23",
-    trainer: "Hoàng Văn Chất Lượng",
-    traineeGroup: "Nhóm PCR - QA",
-    plannedDate: "2026-02-18",
-    approver: "Nguyễn Văn Admin",
-    status: "Hoàn thành",
-    createdAt: "2026-02-10T14:00:00",
-    updatedAt: "2026-02-18T17:30:00",
-  },
-];
-
 // Action button configuration with icons and colors
 const actionButtons = [
   { key: "accept", label: "Tiếp nhận", icon: ClipboardCheck, color: "emerald", bg: "bg-emerald-500", hover: "hover:bg-emerald-600" },
@@ -496,10 +454,12 @@ export default function DeviceProfileTab() {
   // Transfer and liquidation workflow state
   const [transferRecords, setTransferRecords] = useState<TransferProposal[]>(mockTransferProposals);
   const [liquidationRecords, setLiquidationRecords] = useState<LiquidationProposal[]>(mockLiquidationProposals);
-  const [trainingRecords, setTrainingRecords] = useState<TrainingProposal[]>(mockTrainingProposals);
+  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>(mockTrainingPlans);
+  const [trainingDocuments, setTrainingDocuments] = useState<TrainingDocument[]>(mockTrainingDocuments);
+  const [trainingResults, setTrainingResults] = useState<TrainingResult[]>(mockTrainingResults);
   const [transferCounter, setTransferCounter] = useState(3);
   const [liquidationCounter, setLiquidationCounter] = useState(3);
-  const [trainingCounter, setTrainingCounter] = useState(3);
+  const [planCounter, setPlanCounter] = useState(2);
   const [transferViewMode, setTransferViewMode] = useState<"list" | "form">("list");
   const [liquidationViewMode, setLiquidationViewMode] = useState<"list" | "form">("list");
   const [trainingViewMode, setTrainingViewMode] = useState<"list" | "form">("list");
@@ -511,7 +471,6 @@ export default function DeviceProfileTab() {
   const [editingTrainingId, setEditingTrainingId] = useState<string | null>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<TransferProposal | null>(null);
   const [selectedLiquidation, setSelectedLiquidation] = useState<LiquidationProposal | null>(null);
-  const [selectedTraining, setSelectedTraining] = useState<TrainingProposal | null>(null);
   const [transferForm, setTransferForm] = useState<Partial<TransferProposal>>({
     fromLocation: "",
     toLocation: "",
@@ -527,14 +486,6 @@ export default function DeviceProfileTab() {
     estimatedValue: "",
     plannedDate: "",
     requestedBy: "",
-    approver: "",
-    status: "Nháp",
-  });
-  const [trainingForm, setTrainingForm] = useState<Partial<TrainingProposal>>({
-    topic: "",
-    trainer: "",
-    traineeGroup: "",
-    plannedDate: "",
     approver: "",
     status: "Nháp",
   });
@@ -891,45 +842,6 @@ export default function DeviceProfileTab() {
     setLiquidationViewMode("list");
     setEditingLiquidationId(null);
     success("Thành công", status === "Chờ duyệt" ? "Đã gửi phiếu thanh lý phê duyệt" : "Đã lưu phiếu thanh lý");
-  };
-
-  const saveTrainingProposal = (status: WorkflowStatus) => {
-    if (!selectedDeviceForAction || !trainingForm.topic || !trainingForm.trainer || !trainingForm.approver) {
-      error("Lỗi", "Vui lòng nhập nội dung, giảng viên và người phê duyệt");
-      return;
-    }
-
-    const nowIso = new Date().toISOString();
-    const baseData: TrainingProposal = {
-      id: editingTrainingId || `training-${Date.now()}`,
-      trainingCode: editingTrainingId
-        ? trainingRecords.find((record) => record.id === editingTrainingId)?.trainingCode || `DT-${new Date().getFullYear()}-${String(trainingCounter).padStart(3, "0")}`
-        : `DT-${new Date().getFullYear()}-${String(trainingCounter).padStart(3, "0")}`,
-      deviceId: selectedDeviceForAction.id,
-      deviceCode: selectedDeviceForAction.code,
-      deviceName: selectedDeviceForAction.name,
-      topic: trainingForm.topic || "",
-      trainer: trainingForm.trainer || "",
-      traineeGroup: trainingForm.traineeGroup || "",
-      plannedDate: trainingForm.plannedDate || "",
-      approver: trainingForm.approver || "",
-      status,
-      createdAt: editingTrainingId
-        ? trainingRecords.find((record) => record.id === editingTrainingId)?.createdAt || nowIso
-        : nowIso,
-      updatedAt: nowIso,
-    };
-
-    if (editingTrainingId) {
-      setTrainingRecords(trainingRecords.map((record) => (record.id === editingTrainingId ? baseData : record)));
-    } else {
-      setTrainingRecords([baseData, ...trainingRecords]);
-      setTrainingCounter((prev) => prev + 1);
-    }
-
-    setTrainingViewMode("list");
-    setEditingTrainingId(null);
-    success("Thành công", status === "Chờ duyệt" ? "Đã gửi phiếu đào tạo phê duyệt" : "Đã lưu phiếu đào tạo");
   };
   
   const paginatedDevices = useMemo(() => {
@@ -1775,6 +1687,7 @@ export default function DeviceProfileTab() {
           isCurrent: true,
         },
       ],
+      users: [],
       usageStartDate: form.usageStartDate || "",
       usageTime: form.usageTime || "",
       installationLocation: form.installationLocation || "",
@@ -3649,22 +3562,27 @@ export default function DeviceProfileTab() {
         <TrainingModal
           show={activeModal === "training"}
           device={selectedDeviceForAction}
-          viewMode={trainingViewMode}
-          filterStatus={trainingFilterStatus}
-          trainingForm={trainingForm}
-          trainingRecords={trainingRecords}
-          trainingCounter={trainingCounter}
-          editingId={editingTrainingId}
+          users={mockUserProfiles}
+          trainingPlans={trainingPlans}
+          trainingDocuments={trainingDocuments}
+          trainingResults={trainingResults}
+          planCounter={planCounter}
+          editingPlanId={editingTrainingId}
           onClose={() => setActiveModal(null)}
-          onViewModeChange={setTrainingViewMode}
-          onFilterChange={setTrainingFilterStatus}
-          onFormChange={setTrainingForm}
-          onEditingChange={setEditingTrainingId}
-          onSelectRecord={setSelectedTraining}
-          onSave={(status) => saveTrainingProposal(status)}
-          getWorkflowStatusClass={getWorkflowStatusClass}
-          openPrintableWindow={openPrintableWindow}
-          downloadCsvFile={downloadCsvFile}
+          onPlansChange={setTrainingPlans}
+          onDocumentsChange={setTrainingDocuments}
+          onResultsChange={setTrainingResults}
+          onPlanCounterChange={setPlanCounter}
+          onEditingPlanChange={setEditingTrainingId}
+          onDeviceUpdate={(deviceId, updates) => {
+            setDevices(devices.map(d => d.id === deviceId ? { ...d, ...updates } : d));
+          }}
+          showToast={(type, title, message) => success(title, message)}
+          onNotification={(type, title, message) => {
+            // Handle notification - could add to a notifications array
+            console.log(`Notification: ${type} - ${title}: ${message}`);
+          }}
+          currentUser={user}
         />
       )}
 
@@ -3692,20 +3610,6 @@ export default function DeviceProfileTab() {
             <p className="text-sm">Phương thức: {selectedLiquidation.method}</p>
             <p className="text-sm">Giá trị ước tính: {selectedLiquidation.estimatedValue}</p>
             <p className="text-sm">Trạng thái: {selectedLiquidation.status}</p>
-          </div>
-        </div>
-      )}
-
-      {selectedTraining && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4" onClick={() => setSelectedTraining(null)}>
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-2" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-slate-800">Chi tiết phiếu đào tạo</h3>
-            <p className="text-sm text-slate-500">{selectedTraining.trainingCode}</p>
-            <p className="text-sm">Thiết bị: {selectedTraining.deviceCode} - {selectedTraining.deviceName}</p>
-            <p className="text-sm">Nội dung: {selectedTraining.topic}</p>
-            <p className="text-sm">Giảng viên: {selectedTraining.trainer}</p>
-            <p className="text-sm">Nhóm học viên: {selectedTraining.traineeGroup}</p>
-            <p className="text-sm">Trạng thái: {selectedTraining.status}</p>
           </div>
         </div>
       )}

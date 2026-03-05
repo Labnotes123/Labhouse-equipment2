@@ -751,7 +751,7 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
                               </a>
                               <button
                                 type="button"
-                                onClick={() => handleRemoveAttachment(att.id)}
+                                onClick={() => handleRemoveAttachment(att.id || "")}
                                 className="p-1 text-red-600 hover:bg-red-50 rounded"
                                 title="Xóa file"
                               >

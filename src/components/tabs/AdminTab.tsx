@@ -57,7 +57,11 @@ import {
   Branch,
   Department,
   Position,
-  Supplier
+  Supplier,
+  DetailedPermission,
+  DEFAULT_DETAILED_PERMISSIONS,
+  PermissionModule,
+  DeviceProfileSubModule
 } from "@/lib/mockData";
 import { 
   createBackup, 
@@ -155,6 +159,215 @@ export default function AdminTab() {
   const [profileSearchTerm, setProfileSearchTerm] = useState("");
   const [profilePage, setProfilePage] = useState(1);
   const profilesPerPage = 20;
+
+  // Permission Matrix - Expanded sections state
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(["dashboard", "new_device", "device_profile"]));
+  const [expandedSubModules, setExpandedSubModules] = useState<Set<string>>(new Set());
+
+  // Helper functions for accordion
+  const toggleModule = (moduleId: string) => {
+    setExpandedModules(prev => {
+      const next = new Set(prev);
+      if (next.has(moduleId)) {
+        next.delete(moduleId);
+      } else {
+        next.add(moduleId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSubModule = (subModuleId: string) => {
+    setExpandedSubModules(prev => {
+      const next = new Set(prev);
+      if (next.has(subModuleId)) {
+        next.delete(subModuleId);
+      } else {
+        next.add(subModuleId);
+      }
+      return next;
+    });
+  };
+
+  // Toggle permission in detailed permissions
+  const toggleDetailedPermission = (permId: string) => {
+    if (!editingProfile) return;
+    const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+    const newPermissions = currentPerms.map(p => 
+      p.id === permId ? { ...p, enabled: !p.enabled } : p
+    );
+    setEditingProfile({ ...editingProfile, detailedPermissions: newPermissions });
+  };
+
+  // Toggle all permissions in a module (Master Toggle)
+  const toggleModuleAll = (moduleId: string, enabled: boolean) => {
+    if (!editingProfile) return;
+    const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+    const newPermissions = currentPerms.map(p => 
+      p.module === moduleId ? { ...p, enabled } : p
+    );
+    setEditingProfile({ ...editingProfile, detailedPermissions: newPermissions });
+  };
+
+  // Toggle all permissions in a sub-module
+  const toggleSubModuleAll = (subModuleId: string, enabled: boolean) => {
+    if (!editingProfile) return;
+    const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+    const newPermissions = currentPerms.map(p => 
+      p.subModule === subModuleId ? { ...p, enabled } : p
+    );
+    setEditingProfile({ ...editingProfile, detailedPermissions: newPermissions });
+  };
+
+  // Check if all permissions in a module are enabled
+  const isModuleAllEnabled = (moduleId: string): boolean => {
+    if (!editingProfile) return false;
+    const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+    const modulePerms = currentPerms.filter(p => p.module === moduleId);
+    return modulePerms.length > 0 && modulePerms.every(p => p.enabled);
+  };
+
+  // Check if some (but not all) permissions in a module are enabled
+  const isModulePartial = (moduleId: string): boolean => {
+    if (!editingProfile) return false;
+    const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+    const modulePerms = currentPerms.filter(p => p.module === moduleId);
+    const enabledCount = modulePerms.filter(p => p.enabled).length;
+    return enabledCount > 0 && enabledCount < modulePerms.length;
+  };
+
+  // Check if all permissions in a sub-module are enabled
+  const isSubModuleAllEnabled = (subModuleId: string): boolean => {
+    if (!editingProfile) return false;
+    const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+    const subModulePerms = currentPerms.filter(p => p.subModule === subModuleId);
+    return subModulePerms.length > 0 && subModulePerms.every(p => p.enabled);
+  };
+
+  // Get detailed permissions based on module, type, and optional subModule
+  const getDetailedPermissions = (
+    module: PermissionModule,
+    type?: "function" | "file",
+    subModule?: DeviceProfileSubModule
+  ): DetailedPermission[] => {
+    if (!editingProfile) return [];
+    const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+    let perms = currentPerms.filter(p => p.module === module);
+    if (type) {
+      perms = perms.filter(p => p.type === type);
+    }
+    if (subModule) {
+      perms = perms.filter(p => p.subModule === subModule);
+    }
+    return perms;
+  };
+
+  // Sub-Module Accordion Component
+  const SubModuleAccordion = ({
+    title,
+    subModuleId,
+    permissions,
+    color
+  }: {
+    title: string;
+    subModuleId: string;
+    permissions: DetailedPermission[];
+    color: string;
+  }) => {
+    const [expanded, setExpanded] = useState(false);
+    const isAllEnabled = permissions.length > 0 && permissions.every(p => p.enabled);
+    
+    const colorClasses: Record<string, { bg: string; text: string }> = {
+      blue: { bg: 'bg-blue-500', text: 'text-blue-600' },
+      cyan: { bg: 'bg-cyan-500', text: 'text-cyan-600' },
+      red: { bg: 'bg-red-500', text: 'text-red-600' },
+      violet: { bg: 'bg-violet-500', text: 'text-violet-600' },
+      pink: { bg: 'bg-pink-500', text: 'text-pink-600' },
+      teal: { bg: 'bg-teal-500', text: 'text-teal-600' },
+      slate: { bg: 'bg-slate-500', text: 'text-slate-600' },
+    };
+    const colors = colorClasses[color] || colorClasses.blue;
+
+    const functionPerms = permissions.filter(p => p.type === 'function');
+    const filePerms = permissions.filter(p => p.type === 'file');
+
+    return (
+      <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded ${colors.bg} flex items-center justify-center`}>
+              <CheckSquare size={12} className="text-white" />
+            </div>
+            <span className="text-xs font-semibold text-slate-700">{title}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                const newState = !permissions.every(p => p.enabled);
+                if (editingProfile) {
+                  const currentPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+                  const newPermissions = currentPerms.map(p => 
+                    p.subModule === subModuleId ? { ...p, enabled: newState } : p
+                  );
+                  setEditingProfile({ ...editingProfile, detailedPermissions: newPermissions });
+                }
+              }}
+              className={`relative w-8 h-4.5 rounded-full transition-colors ${isAllEnabled ? colors.bg : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${isAllEnabled ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+            </button>
+            {expanded ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+          </div>
+        </button>
+        {expanded && (
+          <div className="px-3 pb-3 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {functionPerms.length > 0 && (
+                <div className="space-y-1">
+                  <h6 className={`text-[10px] font-bold uppercase ${colors.text} flex items-center gap-1`}>
+                    <CheckSquare size={10} /> Chức năng
+                  </h6>
+                  {functionPerms.map(perm => (
+                    <label key={perm.id} className="flex items-start gap-1.5 cursor-pointer p-1 rounded hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={perm.enabled}
+                        onChange={() => toggleDetailedPermission(perm.id)}
+                        className="mt-0.5 w-3.5 h-3.5 rounded"
+                      />
+                      <span className="text-[10px] text-slate-600">{perm.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {filePerms.length > 0 && (
+                <div className="space-y-1">
+                  <h6 className="text-[10px] font-bold text-purple-600 uppercase flex items-center gap-1">
+                    <Upload size={10} /> File
+                  </h6>
+                  {filePerms.map(perm => (
+                    <label key={perm.id} className="flex items-start gap-1.5 cursor-pointer p-1 rounded hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={perm.enabled}
+                        onChange={() => toggleDetailedPermission(perm.id)}
+                        className="mt-0.5 w-3.5 h-3.5 rounded text-purple-600"
+                      />
+                      <span className="text-[10px] text-slate-600">{perm.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Branch/Department state
   const [branches, setBranches] = useState<Branch[]>(mockBranches);
@@ -404,6 +617,9 @@ export default function AdminTab() {
   const handleSaveProfile = async () => {
     if (editingProfile) {
       try {
+        // Initialize detailed permissions if not present
+        const detailedPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+        
         if (editingProfile.id) {
           // Update existing profile
           const res = await fetch(`/api/profiles/${editingProfile.id}`, {
@@ -413,6 +629,7 @@ export default function AdminTab() {
               name: editingProfile.name,
               description: editingProfile.description,
               permissions: editingProfile.permissions,
+              detailedPermissions: detailedPerms,
               isActive: editingProfile.isActive,
             }),
           });
@@ -444,6 +661,7 @@ export default function AdminTab() {
               name: editingProfile.name,
               description: editingProfile.description,
               permissions: editingProfile.permissions,
+              detailedPermissions: detailedPerms,
               isActive: editingProfile.isActive ?? true,
             }),
           });
@@ -1142,6 +1360,7 @@ export default function AdminTab() {
               permissions: permissionCategories.flatMap(cat => [
                 { id: `${cat.id}-1`, category: cat.id, name: cat.id === "quan_ly_chung" ? "Xem thông báo yêu cầu thiết bị mới" : cat.id === "thiet_bi_moi" ? "Cho phép vào mục thiết bị mới" : cat.id === "ho_so_thiet_bi" ? "Cho phép vào mục hồ sơ thiết bị" : cat.id === "quan_tri" ? "Cho phép vào phần quản trị" : "Cho phép vào phần xem lịch sử", enabled: false }
               ]),
+              detailedPermissions: DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: false })),
               createdAt: ""
             };
             setEditingProfile(newProfile); 
@@ -1188,7 +1407,14 @@ export default function AdminTab() {
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       <button
-                        onClick={() => { setEditingProfile({ ...p }); setShowProfileModal(true); }}
+                        onClick={() => { 
+                          const profileToEdit = { 
+                            ...p, 
+                            detailedPermissions: p.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(d => ({ ...d, enabled: d.enabled })) 
+                          };
+                          setEditingProfile(profileToEdit); 
+                          setShowProfileModal(true); 
+                        }}
                         className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                         title="Chỉnh sửa"
                       >
@@ -1279,31 +1505,355 @@ export default function AdminTab() {
                 />
               </div>
 
-              {/* Permissions */}
+              {/* Detailed Permission Matrix */}
               <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-3">Phân quyền</label>
-                <div className="space-y-4">
-                  {permissionCategories.map(cat => (
-                    <div key={cat.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                      <h4 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                        {cat.label}
-                      </h4>
-                      <div className="space-y-2">
-                        {editingProfile.permissions.filter(p => p.category === cat.id).map(perm => (
-                          <label key={perm.id} className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={perm.enabled}
-                              onChange={() => togglePermission(editingProfile, perm.id)}
-                              className="w-4 h-4 rounded text-blue-600"
-                            />
-                            <span className="text-sm text-slate-600">{perm.name}</span>
-                          </label>
-                        ))}
+                <label className="block text-sm font-semibold text-slate-600 mb-3">Ma trận phân quyền</label>
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+                  {/* MODULE 1: QUẢN LÝ CHUNG */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                    <button
+                      onClick={() => toggleModule('dashboard')}
+                      className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+                          <Settings size={16} className="text-white" />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-bold text-slate-800 text-sm">1. QUẢN LÝ CHUNG (Dashboard)</h4>
+                          <p className="text-xs text-slate-500">Theo dõi cảnh báo và phê duyệt tổng hợp</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                      <div className="flex items-center gap-3">
+                        {/* Master Toggle Switch */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleModuleAll('dashboard', !isModuleAllEnabled('dashboard')); }}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${isModuleAllEnabled('dashboard') ? 'bg-blue-500' : isModulePartial('dashboard') ? 'bg-amber-400' : 'bg-slate-300'}`}
+                        >
+                          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isModuleAllEnabled('dashboard') ? 'translate-x-5' : isModulePartial('dashboard') ? 'translate-x-2.5' : 'translate-x-0.5'}`} />
+                        </button>
+                        {expandedModules.has('dashboard') ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+                      </div>
+                    </button>
+                    {expandedModules.has('dashboard') && (
+                      <div className="p-4 border-t border-slate-100">
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Function Permissions */}
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-1">
+                              <CheckSquare size={12} /> Quyền Chức năng
+                            </h5>
+                            {getDetailedPermissions('dashboard', 'function').map(perm => (
+                              <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={perm.enabled}
+                                  onChange={() => toggleDetailedPermission(perm.id)}
+                                  className="mt-0.5 w-4 h-4 rounded text-blue-600"
+                                />
+                                <div className="text-xs">
+                                  <span className="text-slate-700 font-medium">{perm.name}</span>
+                                  {perm.description && <p className="text-slate-400 text-[10px]">{perm.description}</p>}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                          {/* File Permissions */}
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-purple-600 uppercase mb-2 flex items-center gap-1">
+                              <Upload size={12} /> Quyền File Đính kèm
+                            </h5>
+                            {getDetailedPermissions('dashboard', 'file').map(perm => (
+                              <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={perm.enabled}
+                                  onChange={() => toggleDetailedPermission(perm.id)}
+                                  className="mt-0.5 w-4 h-4 rounded text-purple-600"
+                                />
+                                <div className="text-xs">
+                                  <span className="text-slate-700 font-medium">{perm.name}</span>
+                                  {perm.description && <p className="text-slate-400 text-[10px]">{perm.description}</p>}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* MODULE 2: THIẾT BỊ MỚI */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                    <button
+                      onClick={() => toggleModule('new_device')}
+                      className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
+                          <Plus size={16} className="text-white" />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-bold text-slate-800 text-sm">2. THIẾT BỊ MỚI (Đề xuất)</h4>
+                          <p className="text-xs text-slate-500">Xin cấp ngân sách mua sắm máy mới</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleModuleAll('new_device', !isModuleAllEnabled('new_device')); }}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${isModuleAllEnabled('new_device') ? 'bg-green-500' : 'bg-slate-300'}`}
+                        >
+                          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isModuleAllEnabled('new_device') ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </button>
+                        {expandedModules.has('new_device') ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+                      </div>
+                    </button>
+                    {expandedModules.has('new_device') && (
+                      <div className="p-4 border-t border-slate-100">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-green-600 uppercase mb-2 flex items-center gap-1">
+                              <CheckSquare size={12} /> Quyền Chức năng
+                            </h5>
+                            {getDetailedPermissions('new_device', 'function').map(perm => (
+                              <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={perm.enabled}
+                                  onChange={() => toggleDetailedPermission(perm.id)}
+                                  className="mt-0.5 w-4 h-4 rounded text-green-600"
+                                />
+                                <div className="text-xs">
+                                  <span className="text-slate-700 font-medium">{perm.name}</span>
+                                  {perm.description && <p className="text-slate-400 text-[10px]">{perm.description}</p>}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-purple-600 uppercase mb-2 flex items-center gap-1">
+                              <Upload size={12} /> Quyền File Đính kèm
+                            </h5>
+                            {getDetailedPermissions('new_device', 'file').map(perm => (
+                              <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={perm.enabled}
+                                  onChange={() => toggleDetailedPermission(perm.id)}
+                                  className="mt-0.5 w-4 h-4 rounded text-purple-600"
+                                />
+                                <div className="text-xs">
+                                  <span className="text-slate-700 font-medium">{perm.name}</span>
+                                  {perm.description && <p className="text-slate-400 text-[10px]">{perm.description}</p>}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* MODULE 3: HỒ SƠ THIẾT BỊ */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                    <button
+                      onClick={() => toggleModule('device_profile')}
+                      className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
+                          <Shield size={16} className="text-white" />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-bold text-slate-800 text-sm">3. HỒ SƠ THIẾT BỊ</h4>
+                          <p className="text-xs text-slate-500">Kho dữ liệu cốt lõi - Vòng đời máy móc</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleModuleAll('device_profile', !isModuleAllEnabled('device_profile')); }}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${isModuleAllEnabled('device_profile') ? 'bg-orange-500' : 'bg-slate-300'}`}
+                        >
+                          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isModuleAllEnabled('device_profile') ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </button>
+                        {expandedModules.has('device_profile') ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+                      </div>
+                    </button>
+                    {expandedModules.has('device_profile') && (
+                      <div className="border-t border-slate-100 space-y-2 p-3 bg-slate-50/50">
+                        {/* 3.1 Căn bản */}
+                        <SubModuleAccordion
+                          title="3.1. Căn bản (Kho thiết bị)"
+                          subModuleId="device_basic"
+                          permissions={getDetailedPermissions('device_profile', undefined, 'device_basic')}
+                          color="blue"
+                        />
+                        {/* 3.2 Tiếp nhận */}
+                        <SubModuleAccordion
+                          title="3.2. Tiếp nhận (Reception)"
+                          subModuleId="reception"
+                          permissions={getDetailedPermissions('device_profile', undefined, 'reception')}
+                          color="cyan"
+                        />
+                        {/* 3.3 Báo cáo sự cố */}
+                        <SubModuleAccordion
+                          title="3.3. Báo cáo Sự cố (Incidents)"
+                          subModuleId="incident"
+                          permissions={getDetailedPermissions('device_profile', undefined, 'incident')}
+                          color="red"
+                        />
+                        {/* 3.4 Hiệu chuẩn & Bảo dưỡng */}
+                        <SubModuleAccordion
+                          title="3.4. Hiệu chuẩn & Bảo dưỡng"
+                          subModuleId="calibration"
+                          permissions={getDetailedPermissions('device_profile', undefined, 'calibration')}
+                          color="violet"
+                        />
+                        {/* 3.5 Điều chuyển & Thanh lý */}
+                        <SubModuleAccordion
+                          title="3.5. Điều chuyển & Thanh lý"
+                          subModuleId="transfer"
+                          permissions={getDetailedPermissions('device_profile', undefined, 'transfer')}
+                          color="pink"
+                        />
+                        {/* 3.6 Đào tạo */}
+                        <SubModuleAccordion
+                          title="3.6. Đào tạo (Training)"
+                          subModuleId="training"
+                          permissions={getDetailedPermissions('device_profile', undefined, 'training')}
+                          color="teal"
+                        />
+                        {/* 3.7 Thông tin Quản lý */}
+                        <SubModuleAccordion
+                          title="3.7. Thông tin Quản lý"
+                          subModuleId="info_management"
+                          permissions={getDetailedPermissions('device_profile', undefined, 'info_management')}
+                          color="slate"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* MODULE 4: QUẢN TRỊ */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                    <button
+                      onClick={() => toggleModule('admin')}
+                      className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center">
+                          <Settings size={16} className="text-white" />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-bold text-slate-800 text-sm">4. QUẢN TRỊ (Admin)</h4>
+                          <p className="text-xs text-slate-500">Khu vực &quot;buồng lái&quot; - Cấu hình hệ thống</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleModuleAll('admin', !isModuleAllEnabled('admin')); }}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${isModuleAllEnabled('admin') ? 'bg-purple-500' : 'bg-slate-300'}`}
+                        >
+                          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isModuleAllEnabled('admin') ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </button>
+                        {expandedModules.has('admin') ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+                      </div>
+                    </button>
+                    {expandedModules.has('admin') && (
+                      <div className="p-4 border-t border-slate-100">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-purple-600 uppercase mb-2 flex items-center gap-1">
+                              <CheckSquare size={12} /> Quyền Chức năng
+                            </h5>
+                            {getDetailedPermissions('admin', 'function').map(perm => (
+                              <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={perm.enabled}
+                                  onChange={() => toggleDetailedPermission(perm.id)}
+                                  className="mt-0.5 w-4 h-4 rounded text-purple-600"
+                                />
+                                <div className="text-xs">
+                                  <span className="text-slate-700 font-medium">{perm.name}</span>
+                                  {perm.description && <p className="text-slate-400 text-[10px]">{perm.description}</p>}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-rose-600 uppercase mb-2 flex items-center gap-1">
+                              <Upload size={12} /> Quyền File Đính kèm
+                            </h5>
+                            {getDetailedPermissions('admin', 'file').map(perm => (
+                              <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={perm.enabled}
+                                  onChange={() => toggleDetailedPermission(perm.id)}
+                                  className="mt-0.5 w-4 h-4 rounded text-rose-600"
+                                />
+                                <div className="text-xs">
+                                  <span className="text-slate-700 font-medium">{perm.name}</span>
+                                  {perm.description && <p className="text-slate-400 text-[10px]">{perm.description}</p>}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* MODULE 5: LỊCH SỬ */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                    <button
+                      onClick={() => toggleModule('history')}
+                      className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-slate-50 to-zinc-50 hover:from-slate-100 hover:to-zinc-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-500 flex items-center justify-center">
+                          <History size={16} className="text-white" />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-bold text-slate-800 text-sm">5. LỊCH SỬ (Audit Trail)</h4>
+                          <p className="text-xs text-slate-500">Giám sát hành vi - Phục vụ thanh tra ISO</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleModuleAll('history', !isModuleAllEnabled('history')); }}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${isModuleAllEnabled('history') ? 'bg-slate-500' : 'bg-slate-300'}`}
+                        >
+                          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isModuleAllEnabled('history') ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </button>
+                        {expandedModules.has('history') ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+                      </div>
+                    </button>
+                    {expandedModules.has('history') && (
+                      <div className="p-4 border-t border-slate-100">
+                        <div className="space-y-2">
+                          <h5 className="text-xs font-bold text-slate-600 uppercase mb-2 flex items-center gap-1">
+                            <CheckSquare size={12} /> Quyền Chức năng
+                          </h5>
+                          {getDetailedPermissions('history', 'function').map(perm => (
+                            <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                              <input
+                                type="checkbox"
+                                checked={perm.enabled}
+                                onChange={() => toggleDetailedPermission(perm.id)}
+                                className="mt-0.5 w-4 h-4 rounded text-slate-600"
+                              />
+                              <div className="text-xs">
+                                <span className="text-slate-700 font-medium">{perm.name}</span>
+                                {perm.description && <p className="text-slate-400 text-[10px]">{perm.description}</p>}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

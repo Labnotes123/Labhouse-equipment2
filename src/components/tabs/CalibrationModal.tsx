@@ -59,6 +59,7 @@ type CalibrationSchedule = {
 
 type CalibrationResult = {
   id: string;
+  resultCode: string;
   deviceId: string;
   deviceName: string;
   deviceCode: string;
@@ -136,6 +137,7 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
   const [showResultForm, setShowResultForm] = useState(false);
   const [resultForm, setResultForm] = useState<CalibrationResult>({
     id: "",
+    resultCode: "",
     deviceId: "",
     deviceName: "",
     deviceCode: "",
@@ -211,6 +213,7 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
     setScheduleForm({ scheduledDate: "", scheduledTime: "", reminderDays: 3, content: "", relatedUsers: [] });
     setResultForm({
       id: `result-${Date.now()}`,
+      resultCode: `KQHC-${String(Date.now()).slice(-6)}`,
       deviceId: device.id,
       deviceName: device.name,
       deviceCode: device.code,

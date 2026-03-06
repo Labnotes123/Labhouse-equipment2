@@ -6,6 +6,7 @@ export interface Profile {
   name: string;
   description: string;
   permissions: Permission[];
+  detailedPermissions?: DetailedPermission[]; // New detailed permission matrix
   isActive?: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -24,6 +25,124 @@ export type PermissionCategory =
   | "ho_so_thiet_bi" 
   | "quan_tri" 
   | "lich_su";
+
+// ============ DETAILED PERMISSION TYPES ============
+// New detailed permission structure for the Permission Matrix
+
+export type PermissionModule = 
+  | "dashboard"           // Quản lý chung
+  | "new_device"           // Thiết bị mới
+  | "device_profile"      // Hồ sơ thiết bị
+  | "admin"               // Quản trị
+  | "history";            // Lịch sử
+
+export type DeviceProfileSubModule = 
+  | "device_basic"        // Căn bản
+  | "reception"           // Tiếp nhận
+  | "incident"            // Báo cáo sự cố
+  | "calibration"         // Hiệu chuẩn & Bảo dưỡng
+  | "transfer"            // Điều chuyển & Thanh lý
+  | "training"            // Đào tạo
+  | "info_management";    // Thông tin quản lý
+
+export type PermissionType = "function" | "file";
+
+export interface DetailedPermission {
+  id: string;
+  module: PermissionModule;
+  subModule?: DeviceProfileSubModule;
+  type: PermissionType;
+  name: string;
+  description?: string;
+  enabled: boolean;
+}
+
+// Default detailed permissions for new profiles
+export const DEFAULT_DETAILED_PERMISSIONS: DetailedPermission[] = [
+  // MODULE 1: QUẢN LÝ CHUNG (DASHBOARD)
+  { id: "dash_access", module: "dashboard", type: "function", name: "Truy cập Tab Quản lý chung", description: "Cho phép truy cập màn hình Dashboard", enabled: true },
+  { id: "dash_view_stats", module: "dashboard", type: "function", name: "Xem Thẻ cảnh báo thống kê", description: "Thiết bị mới chờ duyệt, Sự cố, Hiệu chuẩn, Bảo dưỡng...", enabled: true },
+  { id: "dash_approve", module: "dashboard", type: "function", name: "Phê duyệt phiếu", description: "Hiển thị icon Tick Xanh, tự động chèn chữ ký điện tử vào PDF", enabled: true },
+  { id: "dash_reject", module: "dashboard", type: "function", name: "Từ chối phiếu", description: "Hiển thị icon Dấu X Đỏ, bắt buộc nhập lý do từ chối", enabled: true },
+  { id: "dash_export_excel", module: "dashboard", type: "function", name: "Xuất Excel", description: "Xuất dữ liệu Bảng danh sách chờ duyệt", enabled: true },
+  { id: "dash_file_view", module: "dashboard", type: "file", name: "Xem File đính kèm", description: "Xem trực tiếp chứng từ (Báo giá, Công văn)", enabled: true },
+  { id: "dash_file_download", module: "dashboard", type: "file", name: "Tải File đính kèm", description: "Tải chứng từ về máy", enabled: true },
+
+  // MODULE 2: THIẾT BỊ MỚI (ĐỀ XUẤT)
+  { id: "newdev_access", module: "new_device", type: "function", name: "Truy cập Tab Thiết bị mới", description: "Cho phép truy cập màn hình thiết bị mới", enabled: true },
+  { id: "newdev_create", module: "new_device", type: "function", name: "Tạo phiếu Đề xuất mua thiết bị", description: "Sinh mã PDX tự động", enabled: true },
+  { id: "newdev_edit_delete", module: "new_device", type: "function", name: "Chỉnh sửa / Xóa phiếu", description: "Chỉ khả dụng khi phiếu ở trạng thái Bản nháp hoặc Bị từ chối", enabled: true },
+  { id: "newdev_export_pdf", module: "new_device", type: "function", name: "Xuất PDF Phiếu đề xuất", description: "Tự động gộp file theo biểu mẫu BM.01", enabled: true },
+  { id: "newdev_register", module: "new_device", type: "function", name: "Đăng ký thiết bị vào hệ thống", description: "Chuyển dữ liệu từ Phiếu đã duyệt sang Tab Hồ sơ thiết bị", enabled: true },
+  { id: "newdev_file_upload", module: "new_device", type: "file", name: "Upload File đính kèm", description: "Hiển thị icon Kẹp ghim để tải file lên (Báo giá, Catalogue)", enabled: true },
+  { id: "newdev_file_view", module: "new_device", type: "file", name: "Xem File đính kèm", description: "Xem trực tiếp file đã tải lên", enabled: true },
+  { id: "newdev_file_download", module: "new_device", type: "file", name: "Tải File đính kèm", description: "Tải file về máy", enabled: true },
+
+  // MODULE 3: HỒ SƠ THIẾT BỊ - 3.1 Căn bản
+  { id: "dev_access", module: "device_profile", subModule: "device_basic", type: "function", name: "Truy cập Tab Hồ sơ thiết bị", description: "Cho phép truy cập kho thiết bị", enabled: true },
+  { id: "dev_create", module: "device_profile", subModule: "device_basic", type: "function", name: "Tạo mới hồ sơ thiết bị", description: "Hiển thị nút + Đăng ký thiết bị", enabled: true },
+  { id: "dev_edit", module: "device_profile", subModule: "device_basic", type: "function", name: "Cập nhật/Chỉnh sửa thông tin gốc", description: "Serial, Model, Chu kỳ bảo dưỡng...", enabled: true },
+  { id: "dev_export_excel", module: "device_profile", subModule: "device_basic", type: "function", name: "Xuất Excel danh sách kho thiết bị", description: "Xuất danh sách thiết bị ra Excel", enabled: true },
+
+  // MODULE 3: HỒ SƠ THIẾT BỊ - 3.2 Tiếp nhận
+  { id: "rec_checklist", module: "device_profile", subModule: "reception", type: "function", name: "Thực hiện Checklist tiếp nhận", description: "Kiểm tra thiết bị khi nhận", enabled: true },
+  { id: "rec_survey", module: "device_profile", subModule: "reception", type: "function", name: "Lập phiếu Khảo sát lắp đặt", description: "BM.05 - Khảo sát lắp đặt", enabled: true },
+  { id: "rec_return", module: "device_profile", subModule: "reception", type: "function", name: "Lập phiếu Tiếp nhận trở lại", description: "BM.07 - Tiếp nhận thiết bị sau sửa chữa", enabled: true },
+  { id: "rec_file_upload", module: "device_profile", subModule: "reception", type: "file", name: "Upload File đính kèm", description: "CO, CQ, BB Bàn giao, HDSD", enabled: true },
+  { id: "rec_file_view", module: "device_profile", subModule: "reception", type: "file", name: "Xem File đính kèm", description: "Xem trực tiếp giấy tờ", enabled: true },
+  { id: "rec_file_download", module: "device_profile", subModule: "reception", type: "file", name: "Tải File đính kèm", description: "Tải giấy tờ về máy", enabled: true },
+
+  // MODULE 3: HỒ SƠ THIẾT BỊ - 3.3 Báo cáo Sự cố
+  { id: "inc_create", module: "device_profile", subModule: "incident", type: "function", name: "Lập Báo cáo sự cố mới", description: "Sinh mã PSC tự động", enabled: true },
+  { id: "inc_work_order", module: "device_profile", subModule: "incident", type: "function", name: "Ghi nhận Công việc Kỹ sư", description: "Work Order - Chi tiết sửa chữa", enabled: true },
+  { id: "inc_approve_close", module: "device_profile", subModule: "incident", type: "function", name: "Phê duyệt đóng sự cố", description: "Xác nhận hoàn thành sửa chữa", enabled: true },
+  { id: "inc_export_pdf", module: "device_profile", subModule: "incident", type: "function", name: "Xuất PDF", description: "BM.11 - Báo cáo sự cố", enabled: true },
+  { id: "inc_file_upload", module: "device_profile", subModule: "incident", type: "file", name: "Upload File đính kèm", description: "Ảnh chụp lỗi, Biên bản sửa chữa của Hãng", enabled: true },
+  { id: "inc_file_view", module: "device_profile", subModule: "incident", type: "file", name: "Xem File đính kèm", description: "Xem trực tiếp ảnh/biên bản", enabled: true },
+  { id: "inc_file_download", module: "device_profile", subModule: "incident", type: "file", name: "Tải File đính kèm", description: "Tải file về máy", enabled: true },
+
+  // MODULE 3: HỒ SƠ THIẾT BỊ - 3.4 Hiệu chuẩn & Bảo dưỡng
+  { id: "cal_request", module: "device_profile", subModule: "calibration", type: "function", name: "Lập phiếu Yêu cầu ngoài kế hoạch", description: "Yêu cầu hiệu chuẩn đột xuất", enabled: true },
+  { id: "cal_schedule", module: "device_profile", subModule: "calibration", type: "function", name: "Lên lịch định kỳ", description: "Cài đặt chu kỳ nhắc nhở", enabled: true },
+  { id: "cal_result", module: "device_profile", subModule: "calibration", type: "function", name: "Ghi nhận kết quả Đạt/Không đạt", description: "BM.09, BM.10 - Kết quả hiệu chuẩn/bảo dưỡng", enabled: true },
+  { id: "cal_file_upload", module: "device_profile", subModule: "calibration", type: "file", name: "Upload File đính kèm", description: "Giấy chứng nhận hiệu chuẩn dấu đỏ, Service Report", enabled: true },
+  { id: "cal_file_view", module: "device_profile", subModule: "calibration", type: "file", name: "Xem File đính kèm", description: "Xem trực tiếp giấy CN", enabled: true },
+  { id: "cal_file_download", module: "device_profile", subModule: "calibration", type: "file", name: "Tải File đính kèm", description: "Tải file về máy", enabled: true },
+
+  // MODULE 3: HỒ SƠ THIẾT BỊ - 3.5 Điều chuyển & Thanh lý
+  { id: "trans_create", module: "device_profile", subModule: "transfer", type: "function", name: "Lập phiếu Đề xuất Điều chuyển / Thanh lý", description: "Sinh mã đề xuất tự động", enabled: true },
+  { id: "trans_complete", module: "device_profile", subModule: "transfer", type: "function", name: "Ghi nhận hồ sơ hoàn tất", description: "Xác nhận hoàn thành thủ tục", enabled: true },
+  { id: "trans_file_upload", module: "device_profile", subModule: "transfer", type: "file", name: "Upload File đính kèm", description: "Hợp đồng bán, Biên bản tiêu hủy, Công văn mượn máy", enabled: true },
+  { id: "trans_file_view", module: "device_profile", subModule: "transfer", type: "file", name: "Xem File đính kèm", description: "Xem trực tiếp hợp đồng/biên bản", enabled: true },
+  { id: "trans_file_download", module: "device_profile", subModule: "transfer", type: "file", name: "Tải File đính kèm", description: "Tải file về máy", enabled: true },
+
+  // MODULE 3: HỒ SƠ THIẾT BỊ - 3.6 Đào tạo
+  { id: "train_create", module: "device_profile", subModule: "training", type: "function", name: "Lên kế hoạch đào tạo", description: "Sinh mã PDT tự động", enabled: true },
+  { id: "train_evaluate", module: "device_profile", subModule: "training", type: "function", name: "Đánh giá Đạt/Không đạt cho học viên", description: "Ghi nhận kết quả đào tạo", enabled: true },
+  { id: "train_file_upload", module: "device_profile", subModule: "training", type: "file", name: "Upload File đính kèm (Giảng viên/QL)", description: "Slide bài giảng, Sách HDSD, Bảng điểm danh chữ ký tươi", enabled: true },
+  { id: "train_file_view", module: "device_profile", subModule: "training", type: "file", name: "Xem File đính kèm", description: "Xem tài liệu đào tạo", enabled: true },
+  { id: "train_file_download", module: "device_profile", subModule: "training", type: "file", name: "Tải File đính kèm", description: "Tải tài liệu về máy", enabled: true },
+
+  // MODULE 3: HỒ SƠ THIẾT BỊ - 3.7 Thông tin Quản lý
+  { id: "info_view", module: "device_profile", subModule: "info_management", type: "function", name: "Xem Lý lịch thiết bị", description: "BM.03 - Lý lịch thiết bị", enabled: true },
+  { id: "info_change_pic", module: "device_profile", subModule: "info_management", type: "function", name: "Thay đổi người phụ trách", description: "Ghi nhận lịch sử luân chuyển nhân sự", enabled: true },
+  { id: "info_print_label", module: "device_profile", subModule: "info_management", type: "function", name: "In Tem Nhãn / Mã QR Code", description: "In tem dán lên máy", enabled: true },
+
+  // MODULE 4: QUẢN TRỊ (ADMIN SYSTEM SETTINGS)
+  { id: "admin_access", module: "admin", type: "function", name: "Truy cập Tab Quản trị", description: "Cho phép vào khu vực quản trị", enabled: true },
+  { id: "admin_user_mgmt", module: "admin", type: "function", name: "Quản lý Người dùng", description: "Thêm mới / Cập nhật / Khóa tài khoản", enabled: true },
+  { id: "admin_profile_mgmt", module: "admin", type: "function", name: "Quản lý Profile", description: "Tạo mới / Sửa / Tick chọn ma trận phân quyền", enabled: true },
+  { id: "admin_dict_mgmt", module: "admin", type: "function", name: "Quản lý Danh mục Từ điển", description: "Thêm/Sửa/Xóa Khoa phòng, Chức vụ, Nước SX, NCC...", enabled: true },
+  { id: "admin_sys_config", module: "admin", type: "function", name: "Cấu hình Hệ thống", description: "Cài đặt thời gian tự động dọn rác lịch sử", enabled: true },
+  { id: "admin_data_mgmt", module: "admin", type: "function", name: "Quản lý Dữ liệu (Backup & Restore)", description: "Cấu hình tự động sao lưu, Tải file nén, Phục hồi dữ liệu", enabled: true },
+  { id: "admin_file_signature", module: "admin", type: "file", name: "Upload / Đổi Chữ ký số", description: "Quyền cực kỳ nhạy cảm - up ảnh chữ ký điện tử", enabled: true },
+  { id: "admin_file_avatar", module: "admin", type: "file", name: "Upload / Sửa Ảnh đại diện", description: "Thay đổi avatar người dùng", enabled: true },
+
+  // MODULE 5: LỊCH SỬ (AUDIT TRAIL)
+  { id: "history_access", module: "history", type: "function", name: "Truy cập Tab Lịch sử", description: "Xem lịch sử hoạt động hệ thống", enabled: true },
+  { id: "history_filter", module: "history", type: "function", name: "Sử dụng Bộ lọc tìm kiếm chéo", description: "Lọc theo Tên User, Thời gian, Tên Thiết bị, Action", enabled: true },
+  { id: "history_export", module: "history", type: "function", name: "Xuất Excel dữ liệu lịch sử", description: "Xuất log hoạt động hệ thống", enabled: true },
+];
 
 export interface UserProfile {
   id: string;

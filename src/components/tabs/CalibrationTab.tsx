@@ -78,6 +78,7 @@ export default function CalibrationTab() {
   }, []);
 
   const [showForm, setShowForm] = useState(false);
+  const [showResultForm, setShowResultForm] = useState(false);
   const [calibrationCounter, setCalibrationCounter] = useState(1);
 
   // Search and filter
@@ -411,7 +412,7 @@ export default function CalibrationTab() {
           </div>
         </div>
         {activeTab === "request" && (
-          <>
+          <div className="flex gap-2">
             <button
               onClick={() => setShowForm(true)}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
@@ -426,7 +427,43 @@ export default function CalibrationTab() {
               <Download size={18} />
               Xuất Excel
             </button>
-          </>
+          </div>
+        )}
+        {activeTab === "schedule" && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+            >
+              <Calendar size={18} />
+              Lên lịch hiệu chuẩn
+            </button>
+            <button
+              onClick={exportToExcel}
+              className="px-4 py-2 border border-purple-200 text-purple-600 rounded-lg hover:bg-purple-50 flex items-center gap-2"
+            >
+              <Download size={18} />
+              Xuất Excel
+            </button>
+          </div>
+        )}
+        {activeTab === "result" && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowResultForm(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Thêm kết quả
+            </button>
+            <button
+              onClick={exportToExcel}
+              className="px-4 py-2 border border-purple-200 text-purple-600 rounded-lg hover:bg-purple-50 flex items-center gap-2"
+            >
+              <Download size={18} />
+              Xuất Excel
+            </button>
+          </div>
         )}
       </div>
 
@@ -486,35 +523,41 @@ export default function CalibrationTab() {
 
       {/* Request Table */}
       {activeTab === "request" && (
-        <SmartTable
-          data={calibrationRequests}
-          columns={requestColumns}
-          keyField="id"
-          settingsKey="calibration_requests"
-          defaultPageSize={10}
-        />
+        <div className="min-h-[500px]">
+          <SmartTable
+            data={calibrationRequests}
+            columns={requestColumns}
+            keyField="id"
+            settingsKey="calibration_requests"
+            defaultPageSize={10}
+          />
+        </div>
       )}
 
       {/* Schedule Table */}
       {activeTab === "schedule" && (
-        <SmartTable
-          data={filteredSchedules}
-          columns={scheduleColumns}
-          keyField="id"
-          settingsKey="calibration_schedules"
-          defaultPageSize={10}
-        />
+        <div className="min-h-[500px]">
+          <SmartTable
+            data={filteredSchedules}
+            columns={scheduleColumns}
+            keyField="id"
+            settingsKey="calibration_schedules"
+            defaultPageSize={10}
+          />
+        </div>
       )}
 
       {/* Result Table */}
       {activeTab === "result" && (
-        <SmartTable
-          data={calibrationResults}
-          columns={resultColumns}
-          keyField="id"
-          settingsKey="calibration_results"
-          defaultPageSize={10}
-        />
+        <div className="min-h-[500px]">
+          <SmartTable
+            data={calibrationResults}
+            columns={resultColumns}
+            keyField="id"
+            settingsKey="calibration_results"
+            defaultPageSize={10}
+          />
+        </div>
       )}
 
       {/* Create Request Form Modal */}
@@ -700,6 +743,136 @@ export default function CalibrationTab() {
                 >
                   <Send size={18} />
                   Hoàn tất và gửi phê duyệt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Result Form Modal */}
+      {showResultForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Thêm kết quả hiệu chuẩn</h3>
+                <p className="text-sm text-slate-500">BM.08.QL.TC.018</p>
+              </div>
+              <button onClick={() => setShowResultForm(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Chọn yêu cầu hiệu chuẩn <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.deviceId}
+                    onChange={(e) => handleDeviceSelect(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                  >
+                    <option value="">-- Chọn yêu cầu --</option>
+                    {calibrationRequests
+                      .filter((r) => r.status === "Đã duyệt" || r.status === "Chờ thực hiện")
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.requestCode} - {r.deviceName}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ngày thực hiện</label>
+                  <input
+                    type="date"
+                    value={form.expectedDate}
+                    onChange={(e) => setForm({ ...form, expectedDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Người thực hiện</label>
+                  <input
+                    type="text"
+                    value={user?.fullName || ""}
+                    readOnly
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Kết luận</label>
+                  <select
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                  >
+                    <option value="">-- Chọn kết luận --</option>
+                    <option value="Đạt">Đạt</option>
+                    <option value="Không đạt">Không đạt</option>
+                    <option value="Đạt có điều kiện">Đạt có điều kiện</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nội dung hiệu chuẩn</label>
+                <textarea
+                  value={form.content}
+                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                  placeholder="Mô tả nội dung đã thực hiện..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Ghi chú</label>
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                  placeholder="Ghi chú thêm..."
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <button
+                  onClick={() => setShowResultForm(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={() => {
+                    // Create new calibration result
+                    const newResult = {
+                      id: `result-${Date.now()}`,
+                      resultCode: `KQHC-${new Date().getFullYear()}-${String(calibrationRequests.length + 1).padStart(3, "0")}`,
+                      deviceId: form.deviceId,
+                      deviceName: form.deviceName,
+                      deviceCode: form.deviceCode,
+                      executionDate: form.expectedDate,
+                      conclusion: "Đạt",
+                      status: "Hoàn thành",
+                      content: form.content,
+                      notes: form.notes,
+                      createdAt: new Date().toISOString(),
+                    };
+                    setCalibrationResults([newResult, ...calibrationResults]);
+                    setShowResultForm(false);
+                    success("Thành công", "Đã thêm kết quả hiệu chuẩn");
+                  }}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                >
+                  <Save size={18} />
+                  Lưu kết quả
                 </button>
               </div>
             </div>

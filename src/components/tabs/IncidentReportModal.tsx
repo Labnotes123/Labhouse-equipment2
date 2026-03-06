@@ -125,6 +125,7 @@ export default function IncidentReportModal({
   onUpdateDeviceStatus,
 }: IncidentReportModalProps) {
   const { success, error } = useToast();
+  const incidentAttachmentInputRef = useRef<HTMLInputElement>(null);
   const workOrderAttachmentInputRef = useRef<HTMLInputElement>(null);
 
   const [incidentReports, setIncidentReports] = useState<IncidentReport[]>(mockIncidents);
@@ -149,6 +150,7 @@ export default function IncidentReportModal({
   const [showApproverDropdown, setShowApproverDropdown] = useState(false);
   const [showRelatedUserDropdown, setShowRelatedUserDropdown] = useState(false);
   const [engineerSignature, setEngineerSignature] = useState<string>("");
+  const [incidentAttachments, setIncidentAttachments] = useState<AttachedFile[]>([]);
 
   const deviceIncidents = useMemo(
     () => incidentReports.filter((incident) => incident.deviceId === device.id),
@@ -193,6 +195,7 @@ export default function IncidentReportModal({
     setEditingIncidentId(null);
     setShowAddRelatedUser(false);
     setNewRelatedUser("");
+    setIncidentAttachments([]);
   };
 
   // Calculate device stop duration
@@ -381,6 +384,27 @@ export default function IncidentReportModal({
       ...prev,
       attachments: (prev.attachments || []).filter((item) => item.id !== attachmentId),
     }));
+  };
+
+  const handleUploadIncidentAttachments = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles: AttachedFile[] = Array.from(files).map((file) => ({
+      id: `incident-att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      type: file.name.toLowerCase().endsWith(".pdf") ? "pdf" : file.type.startsWith("image/") ? "image" : "doc",
+      url: URL.createObjectURL(file),
+      size: file.size,
+    }));
+
+    setIncidentAttachments((prev) => [...prev, ...newFiles]);
+    event.target.value = "";
+    success("Thành công", `Đã thêm ${newFiles.length} tệp đính kèm`);
+  };
+
+  const handleRemoveIncidentAttachment = (attachmentId: string) => {
+    setIncidentAttachments((prev) => prev.filter((item) => item.id !== attachmentId));
   };
 
   const handleSaveWorkOrder = () => {
@@ -1063,12 +1087,74 @@ export default function IncidentReportModal({
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-2">
+                  {/* Attachment Upload Section */}
+                  <div className="border-t border-slate-200 pt-4 mt-4">
+                    <h4 className="font-semibold text-slate-800 mb-3">Đính kèm</h4>
+                    <input
+                      ref={incidentAttachmentInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      className="hidden"
+                      onChange={handleUploadIncidentAttachments}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => incidentAttachmentInputRef.current?.click()}
+                      className="px-4 py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 hover:border-slate-400 flex items-center gap-2"
+                    >
+                      <Upload size={18} />
+                      Tải lên đính kèm
+                    </button>
+
+                    {incidentAttachments.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {incidentAttachments.map((file) => (
+                          <div key={file.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Paperclip size={18} className="text-slate-500" />
+                              <span className="text-sm text-slate-700">{file.name}</span>
+                              <span className="text-xs text-slate-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => onViewAttachment(file)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                                title="Xem"
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onDownloadAttachment(file)}
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
+                                title="Tải xuống"
+                              >
+                                <Download size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => file.id && handleRemoveIncidentAttachment(file.id)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                                title="Xóa"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end items-center pt-2 gap-2">
                     <button
                       onClick={onClose}
-                      className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+                      className="px-3 py-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+                      title="Đóng"
                     >
-                      <X size={16} /> Đóng
+                      <X size={20} />
                     </button>
                     <div className="flex gap-2">
                       <button

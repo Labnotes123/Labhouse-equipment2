@@ -20,11 +20,21 @@ import {
   ClipboardList,
   ArrowUpRight,
   GraduationCap,
+  Filter,
+  Search,
+  BarChart3,
+  Gauge,
+  ShieldAlert,
+  DownloadCloud,
+  UploadCloud,
+  PauseCircle,
+  Flame,
 } from "lucide-react";
 import { formatDate, mockTransferProposals, mockLiquidationProposals, TrainingPlan } from "@/lib/mockData";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 // Types for the unified approval system
 interface UnifiedApprovalItem {
@@ -38,9 +48,25 @@ interface UnifiedApprovalItem {
   data: Record<string, unknown>;
 }
 
+function parseDateFlexible(input?: string | null): Date | null {
+  if (!input) return null;
+  const direct = new Date(input);
+  if (!Number.isNaN(direct.getTime())) return direct;
+
+  const match = input.match(/(?:(\d{1,2}):(\d{2}))?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (match) {
+    const [, hh, mm, dd, MM, yyyy] = match;
+    const date = new Date(Number(yyyy), Number(MM) - 1, Number(dd), Number(hh ?? 0), Number(mm ?? 0));
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+
+  return null;
+}
+
 export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigateNewDevicePending?: () => void }) {
   const { info, success, error: showError } = useToast();
   const { user } = useAuth();
+  const { notifications, unreadCount } = useNotifications();
   const { 
     proposals: mockProposals, 
     incidents: mockIncidents, 
@@ -60,6 +86,11 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [showConfigPanel, setShowConfigPanel] = useState(false);
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [deviceStatusFilter, setDeviceStatusFilter] = useState<string>("all");
+  const [incidentSeverityFilter, setIncidentSeverityFilter] = useState<string>("all");
+  const [timeRange, setTimeRange] = useState<number>(30);
+  const [globalSearch, setGlobalSearch] = useState("");
   const [visibleColumns, setVisibleColumns] = useState({
     code: true,
     name: true,
@@ -69,6 +100,137 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
     status: true,
     actions: true,
   });
+
+  const canViewAdminOnly = user?.role === "Admin" || user?.role === "Giám đốc";
+
+  const now = useMemo(() => new Date(), []);
+
+  const branchOptions = useMemo(() => {
+    const locations = new Set<string>();
+    mockDevices.forEach((d) => locations.add(d.location || d.installationLocation || "Không rõ"));
+    mockIncidents.forEach((i) => locations.add(i.specialty || "Không rõ"));
+    return Array.from(locations);
+  }, [mockDevices, mockIncidents]);
+
+  const devicesFiltered = useMemo(() => {
+    return mockDevices.filter((d) => {
+      const statusMatch = deviceStatusFilter === "all" || d.status === deviceStatusFilter;
+      const branchMatch = branchFilter === "all" || d.location === branchFilter || d.installationLocation === branchFilter;
+      return statusMatch && branchMatch;
+    });
+  }, [mockDevices, deviceStatusFilter, branchFilter]);
+
+  const filteredIncidents = useMemo(() => {
+    return mockIncidents.filter((i) => {
+      const severityMatch = incidentSeverityFilter === "all" || i.severity === incidentSeverityFilter;
+      const incidentDate = parseDateFlexible(i.incidentDateTime) || parseDateFlexible(i.createdAt);
+      const inRange = !incidentDate || (now.getTime() - incidentDate.getTime()) / (1000 * 3600 * 24) <= timeRange;
+      const device = mockDevices.find((d) => d.id === i.deviceId);
+      const branchMatch =
+        branchFilter === "all" ||
+        device?.location === branchFilter ||
+        device?.installationLocation === branchFilter ||
+        i.specialty === branchFilter;
+      return severityMatch && inRange && branchMatch;
+    });
+  }, [mockIncidents, incidentSeverityFilter, timeRange, branchFilter, mockDevices, now]);
+
+  const openIncidents = useMemo(() => filteredIncidents.filter((i) => i.status !== "Hoàn thành" && i.status !== "Từ chối"), [filteredIncidents]);
+
+  const overdueSchedules = useMemo(() => {
+    return mockSchedules.filter((s) => {
+      const scheduleDate = parseDateFlexible(s.scheduledDate);
+      const isOverdue = scheduleDate ? scheduleDate < now && s.status !== "Đã hoàn thành" : s.status === "Quá hạn";
+      const branchMatch = branchFilter === "all" || mockDevices.find((d) => d.id === s.deviceId)?.location === branchFilter;
+      return isOverdue && branchMatch;
+    });
+  }, [mockSchedules, now, branchFilter, mockDevices]);
+
+  const upcomingTraining = useMemo(() => {
+    return trainingPlans.filter((p) => {
+      const trainingDate = parseDateFlexible(p.trainingDate);
+      return (!trainingDate || trainingDate >= now) && (p.status === "Đã duyệt" || p.status === "Chờ duyệt");
+    });
+  }, [trainingPlans, now]);
+
+  const pausedDevices = useMemo(() => devicesFiltered.filter((d) => d.status === "Tạm dừng" || d.status === "Tạm điều chuyển"), [devicesFiltered]);
+
+  const severityCounts = useMemo(() => {
+    return filteredIncidents.reduce(
+      (acc, cur) => {
+        const key = cur.severity || "medium";
+        acc[key as keyof typeof acc] = (acc[key as keyof typeof acc] || 0) + 1;
+        return acc;
+      },
+      { low: 0, medium: 0, high: 0, critical: 0 }
+    );
+  }, [filteredIncidents]);
+
+  const incidentTrend = useMemo(() => {
+    const buckets: Record<string, number> = {};
+    filteredIncidents.forEach((i) => {
+      const date = parseDateFlexible(i.incidentDateTime) || parseDateFlexible(i.createdAt) || now;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      buckets[key] = (buckets[key] || 0) + 1;
+    });
+    const sortedKeys = Object.keys(buckets).sort();
+    return sortedKeys.slice(-6).map((k) => ({ label: k, value: buckets[k] }));
+  }, [filteredIncidents, now]);
+
+  const slaRate = useMemo(() => {
+    const withStop = filteredIncidents.filter((i) => i.stopFrom && i.stopTo);
+    if (withStop.length === 0) return 0;
+    const met = withStop.filter((i) => {
+      const start = parseDateFlexible(i.stopFrom);
+      const end = parseDateFlexible(i.stopTo);
+      if (!start || !end) return false;
+      const hours = (end.getTime() - start.getTime()) / (1000 * 3600);
+      return hours <= 48;
+    }).length;
+    return Math.round((met / withStop.length) * 100);
+  }, [filteredIncidents]);
+
+  const onTimeMaintenanceRate = useMemo(() => {
+    const completed = mockSchedules.filter((s) => s.status === "Đã hoàn thành");
+    if (completed.length === 0) return 0;
+    const onTime = completed.filter((s) => {
+      const date = parseDateFlexible(s.scheduledDate);
+      return date ? date <= now : true;
+    }).length;
+    return Math.round((onTime / completed.length) * 100);
+  }, [mockSchedules, now]);
+
+  const topDevicesByIncidents = useMemo(() => {
+    const counts: Record<string, { name: string; code: string; count: number }> = {};
+    filteredIncidents.forEach((i) => {
+      if (!counts[i.deviceId]) {
+        counts[i.deviceId] = { name: i.deviceName, code: i.deviceCode, count: 0 };
+      }
+      counts[i.deviceId].count += 1;
+    });
+    return Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 5);
+  }, [filteredIncidents]);
+
+  const kpiCards = [
+    { label: "SLA đóng sự cố", value: `${slaRate}%`, desc: "<48h với sự cố dừng máy" },
+    { label: "% hiệu chuẩn/bảo dưỡng đúng hạn", value: `${onTimeMaintenanceRate}%`, desc: "Theo lịch đã hoàn thành" },
+    { label: "Sự cố ảnh hưởng bệnh nhân", value: `${filteredIncidents.filter((i) => i.affectsPatientResult).length}`, desc: "Cần ưu tiên xử lý" },
+  ];
+
+  const globalSearchResults = useMemo(() => {
+    if (!globalSearch.trim()) return [] as { label: string; code: string; type: string }[];
+    const term = globalSearch.toLowerCase();
+    const fromDevices = mockDevices
+      .filter((d) => d.code.toLowerCase().includes(term) || d.name.toLowerCase().includes(term))
+      .map((d) => ({ label: d.name, code: d.code, type: "Thiết bị" }));
+    const fromIncidents = mockIncidents
+      .filter((i) => i.reportCode.toLowerCase().includes(term) || i.deviceName.toLowerCase().includes(term))
+      .map((i) => ({ label: i.deviceName, code: i.reportCode, type: "Sự cố" }));
+    const fromProposals = mockProposals
+      .filter((p) => p.proposalCode.toLowerCase().includes(term))
+      .map((p) => ({ label: p.necessity.slice(0, 50), code: p.proposalCode, type: "Đề xuất" }));
+    return [...fromDevices, ...fromIncidents, ...fromProposals].slice(0, 8);
+  }, [globalSearch, mockDevices, mockIncidents, mockProposals]);
 
   // Get pending items from different sources
   const pendingProposals = mockProposals.filter((p) => p.status === "Chờ duyệt");
@@ -222,6 +384,49 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
   }, [activeFilter, searchTerm, pageSize]);
 
   // Stats for cards
+  const overviewCards = [
+    {
+      label: "Sự cố mở",
+      value: openIncidents.length,
+      hint: `${(severityCounts.high || 0) + (severityCounts.critical || 0)} high/critical`,
+      icon: <AlertTriangle size={20} />,
+      color: "from-red-500 to-orange-500",
+      onClick: () => setActiveFilter("Sự_cố"),
+    },
+    {
+      label: "Lịch quá hạn",
+      value: overdueSchedules.length,
+      hint: "Hiệu chuẩn/Bảo dưỡng",
+      icon: <CalendarCheck size={20} />,
+      color: "from-amber-500 to-yellow-500",
+      onClick: () => setActiveTab(0),
+    },
+    {
+      label: "Phiếu chờ duyệt",
+      value: unifiedApprovals.length,
+      hint: "Tất cả hàng đợi",
+      icon: <FileText size={20} />,
+      color: "from-blue-500 to-indigo-500",
+      onClick: () => setActiveFilter("all"),
+    },
+    {
+      label: "Thiết bị tạm dừng/điều chuyển",
+      value: pausedDevices.length,
+      hint: "Cần kiểm tra trạng thái",
+      icon: <PauseCircle size={20} />,
+      color: "from-slate-500 to-slate-700",
+      onClick: () => setActiveTab(2),
+    },
+    {
+      label: "Đào tạo sắp diễn ra",
+      value: upcomingTraining.length,
+      hint: "2 tuần tới",
+      icon: <GraduationCap size={20} />,
+      color: "from-violet-500 to-purple-600",
+      onClick: () => setActiveTab(4),
+    },
+  ];
+
   const stats = [
     {
       label: "Thiết bị mới chờ duyệt",
@@ -372,6 +577,38 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
     }
   };
 
+  const handleExportAlerts = async () => {
+    if (alertItems.length === 0) {
+      showError("Không có cảnh báo để xuất");
+      return;
+    }
+    const headers = ["Tiêu đề", "Loại", "Mô tả"];
+    const rows = alertItems.map((a) => [a.title, a.badge, a.desc]);
+    const csvContent = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))].join("\n");
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Canh_bao_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    success("Đã xuất CSV cảnh báo");
+  };
+
+  const handleQuickCreate = (type: "incident" | "proposal" | "maintenance") => {
+    info("Tạo phiếu nhanh", type === "incident" ? "Đi tới tab sự cố trong Hồ sơ thiết bị" : type === "proposal" ? "Đi tới tab Thiết bị mới" : "Đi tới lịch bảo dưỡng");
+    if (type === "incident") {
+      setActiveTab(2);
+    } else if (type === "proposal" && onNavigateNewDevicePending) {
+      onNavigateNewDevicePending();
+    } else if (type === "maintenance") {
+      setActiveTab(1);
+    }
+  };
+
   const handleViewDetails = (item: UnifiedApprovalItem) => {
     info("Xem chi tiết", `${item.code} - ${item.name}`);
   };
@@ -441,6 +678,64 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
         <div className="text-right">
           <p className="text-xs text-slate-400">Cập nhật lần cuối</p>
           <p className="text-sm font-semibold text-slate-600">{new Date().toLocaleString("vi-VN")}</p>
+        </div>
+      </div>
+
+      {/* Biểu đồ xu hướng & phân tích nhanh */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm mb-3">
+            <BarChart3 size={16} />
+            Số sự cố theo tháng
+          </div>
+          <div className="space-y-2">
+            {incidentTrend.length === 0 && <p className="text-xs text-slate-400">Không có dữ liệu</p>}
+            {incidentTrend.map((b) => (
+              <div key={b.label} className="flex items-center gap-2">
+                <span className="w-16 text-xs text-slate-500">{b.label}</span>
+                <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500" style={{ width: `${Math.min(100, b.value * 20)}%` }} />
+                </div>
+                <span className="w-6 text-xs text-slate-700 text-right">{b.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm mb-3">
+            <Activity size={16} />
+            Top thiết bị phát sinh sự cố
+          </div>
+          <div className="space-y-2">
+            {topDevicesByIncidents.length === 0 && <p className="text-xs text-slate-400">Chưa có sự cố</p>}
+            {topDevicesByIncidents.map((d, idx) => (
+              <div key={d.code} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
+                <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-700">{idx + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-700 truncate">{d.name}</p>
+                  <p className="text-xs text-slate-500">{d.code}</p>
+                </div>
+                <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700">{d.count} sự cố</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm mb-3">
+            <Gauge size={16} />
+            Mức độ sự cố hiện tại
+          </div>
+          <div className="space-y-2">
+            {["critical", "high", "medium", "low"].map((lvl) => (
+              <div key={lvl} className="flex items-center gap-2">
+                <span className="w-20 text-xs font-semibold text-slate-600 capitalize">{lvl}</span>
+                <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden">
+                  <div className={`${lvl === "critical" ? "bg-red-500" : lvl === "high" ? "bg-orange-500" : lvl === "medium" ? "bg-amber-400" : "bg-emerald-500"} h-full`} style={{ width: `${Math.min(100, (severityCounts as any)[lvl] * 25)}%` }} />
+                </div>
+                <span className="w-6 text-xs text-slate-700 text-right">{(severityCounts as any)[lvl]}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1003,6 +1298,114 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
                                 <button className="p-1.5 rounded bg-purple-100 hover:bg-purple-200" title="Xem Biên bản">
                                   <ClipboardList size={14} className="text-purple-600" />
                                 </button>
+                                <button className="p-1.5 rounded bg-red-100 hover:bg-red-200" title="Xuất PDF">
+                                  <ArrowUpRight size={14} className="text-red-600" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">
+                          Chưa có công việc kỹ sư nào. Các công việc sẽ xuất hiện khi có sự cố được tạo.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 4: Lịch Đào tạo sắp tới */}
+          {activeTab === 4 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">Kế hoạch đào tạo thiết bị sắp diễn ra</p>
+                <div className="flex gap-2">
+                  <button className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200">
+                    <Settings size={16} className="text-slate-600" />
+                  </button>
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium">
+                    <Download size={14} />
+                    Xuất Excel
+                  </button>
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mã kế hoạch</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Thiết bị</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Chủ đề</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Ngày đào tạo</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Giảng viên</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Địa điểm</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Trạng thái</th>
+                      <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 uppercase">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {trainingPlans.filter(p => p.status === "Đã duyệt" || p.status === "Chờ duyệt").length > 0 ? (
+                      trainingPlans
+                        .filter(p => p.status === "Đã duyệt" || p.status === "Chờ duyệt")
+                        .slice(0, 10)
+                        .map((plan) => (
+                          <tr key={plan.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 text-sm font-medium text-slate-700">{plan.planCode}</td>
+                            <td className="px-4 py-3 text-sm text-slate-700">{plan.deviceName}</td>
+                            <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{plan.topic}</td>
+                            <td className="px-4 py-3 text-sm text-slate-500">{formatDate(plan.trainingDate)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-500">{plan.instructorName}</td>
+                            <td className="px-4 py-3 text-sm text-slate-500">{plan.location}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                plan.status === "Đã duyệt" ? "bg-emerald-100 text-emerald-700" :
+                                plan.status === "Chờ duyệt" ? "bg-amber-100 text-amber-700" :
+                                plan.status === "Hoàn thành" ? "bg-blue-100 text-blue-700" :
+                                "bg-slate-100 text-slate-700"
+                              }`}>
+                                {plan.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-2">
+                                <button className="p-1.5 rounded bg-slate-100 hover:bg-slate-200" title="Xem chi tiết">
+                                  <Eye size={14} className="text-slate-600" />
+                                </button>
+                                <button className="p-1.5 rounded bg-blue-100 hover:bg-blue-200" title="Danh sách học viên">
+                                  <ClipboardList size={14} className="text-blue-600" />
+                                </button>
+                                {plan.status === "Đã duyệt" && (
+                                  <button className="p-1.5 rounded bg-purple-100 hover:bg-purple-200" title="Ghi nhận kết quả">
+                                    <FileText size={14} className="text-purple-600" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">
+                          Chưa có kế hoạch đào tạo nào. Các kế hoạch sẽ xuất hiện khi được tạo từ hồ sơ thiết bị.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
                                 <button className="p-1.5 rounded bg-red-100 hover:bg-red-200" title="Xuất PDF">
                                   <ArrowUpRight size={14} className="text-red-600" />
                                 </button>

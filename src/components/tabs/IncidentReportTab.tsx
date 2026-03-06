@@ -223,6 +223,7 @@ export default function IncidentReportTab() {
       key: "reportCode",
       label: "Mã phiếu",
       minWidth: 160,
+      filterable: true,
       render: (incident) => (
         <div className="space-y-1">
           <div className="font-semibold text-red-600">{incident.reportCode}</div>
@@ -234,6 +235,7 @@ export default function IncidentReportTab() {
       key: "deviceName",
       label: "Thiết bị",
       minWidth: 200,
+      filterable: true,
       render: (incident) => (
         <div className="space-y-1">
           <div className="font-medium text-slate-800">{incident.deviceName}</div>
@@ -245,6 +247,7 @@ export default function IncidentReportTab() {
       key: "reportedBy",
       label: "Người báo cáo",
       minWidth: 180,
+      filterable: true,
       render: (incident) => (
         <div className="space-y-1">
           <div className="font-medium text-slate-800">{incident.reportedBy || incident.discoveredBy}</div>
@@ -252,12 +255,13 @@ export default function IncidentReportTab() {
         </div>
       ),
     },
-    { key: "incidentDateTime", label: "Thời gian phát hiện", minWidth: 160 },
-    { key: "completionDateTime", label: "Thời gian kết thúc", minWidth: 160 },
+    { key: "incidentDateTime", label: "Thời gian phát hiện", minWidth: 160, filterable: true, dateFilter: true },
+    { key: "completionDateTime", label: "Thời gian kết thúc", minWidth: 160, filterable: true, dateFilter: true },
     {
       key: "status",
       label: "Trạng thái",
       minWidth: 140,
+      filterable: true,
       render: (incident) => (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(incident.status)}`}>
           {incident.status}
@@ -345,13 +349,15 @@ export default function IncidentReportTab() {
       key: "workOrderCode",
       label: "Mã công việc",
       minWidth: 160,
+      filterable: true,
       render: (wo) => <span className="font-semibold text-blue-600">{wo.workOrderCode}</span>,
     },
-    { key: "incidentReportCode", label: "Mã báo cáo", minWidth: 140 },
+    { key: "incidentReportCode", label: "Mã báo cáo", minWidth: 140, filterable: true },
     {
       key: "contactPerson",
       label: "Người thực hiện",
       minWidth: 160,
+      filterable: true,
       render: (wo) => (
         <div className="space-y-1">
           <div className="font-medium text-slate-800">{wo.contactPerson}</div>
@@ -359,12 +365,13 @@ export default function IncidentReportTab() {
         </div>
       ),
     },
-    { key: "startDateTime", label: "Thời gian bắt đầu", minWidth: 160 },
-    { key: "endDateTime", label: "Thời gian kết thúc", minWidth: 160 },
+    { key: "startDateTime", label: "Thời gian bắt đầu", minWidth: 160, filterable: true, dateFilter: true },
+    { key: "endDateTime", label: "Thời gian kết thúc", minWidth: 160, filterable: true, dateFilter: true },
     {
       key: "status",
       label: "Trạng thái",
       minWidth: 140,
+      filterable: true,
       render: (wo) => (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWorkOrderStatusColor(wo.status)}`}>
           {wo.status}
@@ -980,7 +987,7 @@ export default function IncidentReportTab() {
   };
 
   return (
-    <div className="p-6 space-y-8 max-w-[1800px] mx-auto">
+    <div className="p-6 lg:p-8 space-y-8 w-full max-w-none mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -1027,9 +1034,9 @@ export default function IncidentReportTab() {
         </button>
       </div>
 
-      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+      <div className="w-full max-w-none mx-auto space-y-6">
         {activeTab === "reports" && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 min-h-[720px]">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-4 sm:p-5 min-h-[900px] w-full overflow-hidden">
             <SmartTable
               data={incidentReports}
               columns={incidentColumns}
@@ -1038,12 +1045,13 @@ export default function IncidentReportTab() {
               defaultPageSize={10}
               settingsKey="incident-reports"
               onExport={exportIncidents}
+              showSettings
             />
           </div>
         )}
 
         {activeTab === "work-orders" && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 min-h-[720px]">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-4 sm:p-5 min-h-[900px] w-full overflow-hidden">
             <SmartTable
               data={allWorkOrders}
               columns={workOrderColumns}
@@ -1052,6 +1060,7 @@ export default function IncidentReportTab() {
               defaultPageSize={10}
               settingsKey="incident-work-orders"
               onExport={exportWorkOrders}
+              showSettings
             />
           </div>
         )}

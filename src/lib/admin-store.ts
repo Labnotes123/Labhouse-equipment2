@@ -115,6 +115,14 @@ function getStore(): AdminStore {
   return globalAny[STORE_KEY]!;
 }
 
+function normalizeScopePermission(scope: DataScopePermission): DataScopePermission {
+  return {
+    ...scope,
+    deviceIds: scope.deviceIds ?? [],
+    deviceTypes: scope.deviceTypes ?? [],
+  };
+}
+
 function makeId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -680,7 +688,7 @@ export function updateHistoryConfig(payload: Partial<HistoryConfig>, actorName?:
 
 // === DATA SCOPE PERMISSIONS ===
 export function listScopePermissions(): DataScopePermission[] {
-  return getStore().scopePermissions;
+  return getStore().scopePermissions.map(normalizeScopePermission);
 }
 
 export function upsertScopePermission(payload: Partial<DataScopePermission>, actorName?: string): DataScopePermission {
@@ -697,6 +705,7 @@ export function upsertScopePermission(payload: Partial<DataScopePermission>, act
       profileName: payload.profileName ?? profile?.name ?? before.profileName,
       branchIds: payload.branchIds ?? before.branchIds,
       departmentIds: payload.departmentIds ?? before.departmentIds,
+      deviceIds: payload.deviceIds ?? before.deviceIds ?? [],
       deviceTypes: payload.deviceTypes ?? before.deviceTypes,
       updatedAt: now,
     };
@@ -720,6 +729,7 @@ export function upsertScopePermission(payload: Partial<DataScopePermission>, act
     profileName: payload.profileName ?? profile?.name ?? "",
     branchIds: payload.branchIds || [],
     departmentIds: payload.departmentIds || [],
+    deviceIds: payload.deviceIds || [],
     deviceTypes: payload.deviceTypes || [],
     isActive: payload.isActive ?? true,
     createdAt: now,

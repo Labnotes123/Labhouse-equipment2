@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import type {
   Device,
   NewDeviceProposal,
@@ -96,6 +97,7 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [devices, setDevices] = useState<Device[]>([]);
   const [proposals, setProposals] = useState<NewDeviceProposal[]>([]);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
@@ -119,14 +121,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const fetchDevices = useCallback(async () => {
     setDevicesLoading(true);
     try {
-      const data = await apiFetch<Device[]>("/api/devices");
+      const params = new URLSearchParams();
+      if (user?.id) params.set("userId", user.id);
+      const url = params.toString() ? `/api/devices?${params.toString()}` : "/api/devices";
+      const data = await apiFetch<Device[]>(url);
       setDevices(data);
     } catch (e) {
       console.error("Failed to fetch devices", e);
     } finally {
       setDevicesLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const fetchProposals = useCallback(async () => {
     setProposalsLoading(true);

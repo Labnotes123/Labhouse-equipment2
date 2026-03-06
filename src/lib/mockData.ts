@@ -236,7 +236,8 @@ export interface DataScopePermission {
   profileName?: string;
   branchIds: string[];
   departmentIds: string[];
-  deviceTypes: string[];
+  deviceIds: string[];
+  deviceTypes?: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -2238,6 +2239,7 @@ export const mockScopePermissions: DataScopePermission[] = [
     profileName: "Quản trị viên",
     branchIds: ["b1", "b2"],
     departmentIds: ["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9"],
+    deviceIds: mockDevices.map((d) => d.id),
     deviceTypes: [...deviceTypes],
     isActive: true,
     createdAt: "2024-01-01T08:00:00",
@@ -2248,6 +2250,7 @@ export const mockScopePermissions: DataScopePermission[] = [
     profileName: "Nhân viên",
     branchIds: ["b1"],
     departmentIds: ["d1", "d8"],
+    deviceIds: ["d1", "d8"],
     deviceTypes: ["Máy xét nghiệm chính", "Máy thành phần", "Máy ly tâm"],
     isActive: true,
     createdAt: "2024-01-03T08:00:00",

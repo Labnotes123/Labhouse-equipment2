@@ -47,7 +47,6 @@ import { useToast } from "@/contexts/ToastContext";
 import { useData } from "@/contexts/DataContext";
 import {
   mockDevices,
-  deviceTypes,
   mockHistoryConfig,
   mockSecurityPolicy,
   Profile,
@@ -61,7 +60,6 @@ import {
   InstallationLocation,
   DetailedPermission,
   DataScopePermission,
-  RoleTemplate,
   SecurityPolicy,
   ConfigAuditLog,
   DEFAULT_DETAILED_PERMISSIONS,
@@ -92,8 +90,6 @@ type AdminSection =
   | "suppliers"
   | "history_config"
   | "backup"
-  | "data_scope"
-  | "role_templates"
   | "security_policy"
   | "config_audit";
 
@@ -101,7 +97,7 @@ type UserColumn = "username" | "fullName" | "employeeId" | "phone" | "email" | "
 
 const sections: { id: AdminSection; label: string; icon: React.ReactNode; color: string }[] = [
   { id: "users", label: "Cấu hình người dùng", icon: <Users size={20} />, color: "from-purple-500 to-violet-600" },
-  { id: "profiles", label: "Cấu hình Profile", icon: <UserCheck size={20} />, color: "from-blue-500 to-indigo-600" },
+  { id: "profiles", label: "Phân quyền", icon: <UserCheck size={20} />, color: "from-blue-500 to-indigo-600" },
   { id: "branches", label: "Chi nhánh", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
   { id: "departments", label: "Khoa phòng", icon: <Building2 size={20} />, color: "from-orange-500 to-amber-600" },
   { id: "positions", label: "Chức vụ", icon: <Briefcase size={20} />, color: "from-cyan-500 to-blue-600" },
@@ -109,8 +105,6 @@ const sections: { id: AdminSection; label: string; icon: React.ReactNode; color:
   { id: "countries", label: "Nước sản xuất", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
   { id: "suppliers", label: "Nhà cung cấp", icon: <Truck size={20} />, color: "from-pink-500 to-rose-600" },
   { id: "history_config", label: "Cấu hình lịch sử", icon: <History size={20} />, color: "from-slate-500 to-zinc-600" },
-  { id: "data_scope", label: "Phạm vi dữ liệu", icon: <Filter size={20} />, color: "from-indigo-500 to-blue-600" },
-  { id: "role_templates", label: "Role Template & Diff", icon: <CheckSquare size={20} />, color: "from-violet-500 to-purple-600" },
   { id: "security_policy", label: "Chính sách bảo mật", icon: <Lock size={20} />, color: "from-red-500 to-rose-600" },
   { id: "config_audit", label: "Config Audit", icon: <Shield size={20} />, color: "from-amber-500 to-orange-600" },
   { id: "backup", label: "Sao lưu & Khôi phục", icon: <Database size={20} />, color: "from-emerald-500 to-teal-600" },
@@ -126,7 +120,7 @@ const permissionCategories: { id: PermissionCategory; label: string }[] = [
 
 export default function AdminTab() {
   const { user } = useAuth();
-  const { success, error, info } = useToast();
+  const { success, error } = useToast();
   const [activeSection, setActiveSection] = useState<AdminSection>("users");
 
   // User management state
@@ -174,9 +168,14 @@ export default function AdminTab() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [permissionSubTab, setPermissionSubTab] = useState<"profile_config" | "data_scope">("profile_config");
+  const [profileModalTab, setProfileModalTab] = useState<"function" | "data_scope">("function");
   const [profileSearchTerm, setProfileSearchTerm] = useState("");
   const [profilePage, setProfilePage] = useState(1);
   const profilesPerPage = 20;
+  const [modalScopeBranchIds, setModalScopeBranchIds] = useState<string[]>([]);
+  const [modalScopeDepartmentIds, setModalScopeDepartmentIds] = useState<string[]>([]);
+  const [modalScopeDeviceIds, setModalScopeDeviceIds] = useState<string[]>([]);
 
   // Permission Matrix - Expanded sections state
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(["dashboard", "new_device", "device_profile"]));
@@ -429,18 +428,7 @@ export default function AdminTab() {
   const [selectedScopeProfileId, setSelectedScopeProfileId] = useState("");
   const [scopeBranchIds, setScopeBranchIds] = useState<string[]>([]);
   const [scopeDepartmentIds, setScopeDepartmentIds] = useState<string[]>([]);
-  const [scopeDeviceTypes, setScopeDeviceTypes] = useState<string[]>([]);
-
-  const [roleTemplates, setRoleTemplates] = useState<RoleTemplate[]>([]);
-  const [newTemplateName, setNewTemplateName] = useState("");
-  const [newTemplateDescription, setNewTemplateDescription] = useState("");
-  const [newTemplateProfileIds, setNewTemplateProfileIds] = useState<string[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [selectedTemplateUserId, setSelectedTemplateUserId] = useState("");
-
-  const [diffLeftProfileId, setDiffLeftProfileId] = useState("");
-  const [diffRightProfileId, setDiffRightProfileId] = useState("");
-  const [permissionDiffRows, setPermissionDiffRows] = useState<Array<{ permissionId: string; permissionName: string; module: string; leftEnabled: boolean; rightEnabled: boolean }>>([]);
+  const [scopeDeviceIds, setScopeDeviceIds] = useState<string[]>([]);
 
   const [securityPolicy, setSecurityPolicy] = useState<SecurityPolicy>(mockSecurityPolicy);
   const [configAuditLogs, setConfigAuditLogs] = useState<ConfigAuditLog[]>([]);
@@ -580,18 +568,6 @@ export default function AdminTab() {
     }
   }, []);
 
-  const fetchRoleTemplates = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/role-templates");
-      if (res.ok) {
-        const data = await res.json() as RoleTemplate[];
-        setRoleTemplates(data);
-      }
-    } catch (e) {
-      console.error("Failed to fetch role templates", e);
-    }
-  }, []);
-
   const fetchSecurityPolicy = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/security-policy");
@@ -627,10 +603,9 @@ export default function AdminTab() {
     fetchCountries();
     fetchHistoryConfig();
     fetchScopePermissions();
-    fetchRoleTemplates();
     fetchSecurityPolicy();
     fetchConfigAudits();
-  }, [fetchUsers, fetchProfiles, fetchBranches, fetchPositions, fetchInstallLocations, fetchSuppliers, fetchDepartments, fetchCountries, fetchHistoryConfig, fetchScopePermissions, fetchRoleTemplates, fetchSecurityPolicy, fetchConfigAudits]);
+  }, [fetchUsers, fetchProfiles, fetchBranches, fetchPositions, fetchInstallLocations, fetchSuppliers, fetchDepartments, fetchCountries, fetchHistoryConfig, fetchScopePermissions, fetchSecurityPolicy, fetchConfigAudits]);
 
   if (!canAccess) {
     return (
@@ -825,6 +800,8 @@ export default function AdminTab() {
       try {
         // Initialize detailed permissions if not present
         const detailedPerms = editingProfile.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: p.enabled }));
+        let savedProfileId = editingProfile.id;
+        let savedProfileName = editingProfile.name;
         
         if (editingProfile.id) {
           // Update existing profile
@@ -842,6 +819,8 @@ export default function AdminTab() {
           if (!res.ok) throw new Error("Failed to update profile");
           const updated = await res.json();
           setProfiles(prev => prev.map(p => p.id === editingProfile.id ? { ...updated, code: p.code, createdAt: p.createdAt, updatedAt: new Date().toISOString() } : p));
+          savedProfileId = editingProfile.id;
+          savedProfileName = updated.name || editingProfile.name;
           success("Đã cập nhật", "Profile đã được cập nhật");
           // Log to history
           addHistory({
@@ -874,6 +853,8 @@ export default function AdminTab() {
           if (!res.ok) throw new Error("Failed to create profile");
           const created = await res.json();
           setProfiles(prev => [...prev, { ...created, createdAt: new Date().toISOString() }]);
+          savedProfileId = created.id;
+          savedProfileName = created.name || editingProfile.name;
           success("Đã tạo", "Profile mới đã được tạo");
           // Log to history
           addHistory({
@@ -890,6 +871,24 @@ export default function AdminTab() {
             timestamp: new Date().toISOString(),
           }).catch(console.error);
         }
+
+        if (savedProfileId) {
+          const existingScope = scopePermissions.find((it) => it.profileId === savedProfileId);
+          const scopeRes = await fetch(existingScope ? `/api/admin/scope-permissions/${existingScope.id}` : "/api/admin/scope-permissions", {
+            method: existingScope ? "PUT" : "POST",
+            headers: actorHeaders(),
+            body: JSON.stringify({
+              profileId: savedProfileId,
+              profileName: savedProfileName,
+              branchIds: modalScopeBranchIds,
+              departmentIds: modalScopeDepartmentIds,
+              deviceIds: modalScopeDeviceIds,
+              isActive: true,
+            }),
+          });
+          if (!scopeRes.ok) throw new Error("Failed to save profile scope");
+          await fetchScopePermissions();
+        }
       } catch (err) {
         console.error("Profile save error:", err);
         error("Lỗi", "Không thể lưu profile vào cơ sở dữ liệu");
@@ -897,6 +896,7 @@ export default function AdminTab() {
     }
     setShowProfileModal(false);
     setEditingProfile(null);
+    setProfileModalTab("function");
   };
 
   const handleDeleteProfile = async (profileId: string) => {
@@ -1284,6 +1284,34 @@ export default function AdminTab() {
     return [...items, value];
   };
 
+  const getDepartmentsByBranchIds = (branchIds: string[]) => {
+    if (branchIds.length === 0) return departments;
+    return departments.filter((dept) => branchIds.includes(dept.branchId));
+  };
+
+  const getDeviceDepartment = (device: { specialty?: string }) => {
+    return departments.find((dept) => dept.name.toLowerCase() === (device.specialty || "").toLowerCase());
+  };
+
+  const getDevicesByScopeFilter = (branchIds: string[], departmentIds: string[]) => {
+    return mockDevices.filter((device) => {
+      const dept = getDeviceDepartment(device);
+      const matchBranch = branchIds.length === 0 || (!!dept?.branchId && branchIds.includes(dept.branchId));
+      const matchDept = departmentIds.length === 0 || (!!dept?.id && departmentIds.includes(dept.id));
+      return matchBranch && matchDept;
+    });
+  };
+
+  const openProfileModalWithScope = (profile: Profile) => {
+    const existingScope = scopePermissions.find((it) => it.profileId === profile.id);
+    setModalScopeBranchIds(existingScope?.branchIds || []);
+    setModalScopeDepartmentIds(existingScope?.departmentIds || []);
+    setModalScopeDeviceIds(existingScope?.deviceIds || []);
+    setProfileModalTab("function");
+    setEditingProfile(profile);
+    setShowProfileModal(true);
+  };
+
   const handleSaveScopePermission = async () => {
     if (!selectedScopeProfileId) {
       error("Lỗi", "Vui lòng chọn profile để cấu hình phạm vi dữ liệu");
@@ -1298,7 +1326,7 @@ export default function AdminTab() {
           profileId: selectedScopeProfileId,
           branchIds: scopeBranchIds,
           departmentIds: scopeDepartmentIds,
-          deviceTypes: scopeDeviceTypes,
+          deviceIds: scopeDeviceIds,
           isActive: true,
         }),
       });
@@ -1309,103 +1337,6 @@ export default function AdminTab() {
     } catch (e) {
       console.error("Save scope error", e);
       error("Lỗi", "Không thể lưu phạm vi dữ liệu");
-    }
-  };
-
-  const handleCreateRoleTemplate = async () => {
-    if (!newTemplateName.trim()) {
-      error("Lỗi", "Vui lòng nhập tên role template");
-      return;
-    }
-    try {
-      const res = await fetch("/api/admin/role-templates", {
-        method: "POST",
-        headers: actorHeaders(),
-        body: JSON.stringify({
-          name: newTemplateName.trim(),
-          description: newTemplateDescription.trim(),
-          profileIds: newTemplateProfileIds,
-          defaultScope: {
-            branchIds: scopeBranchIds,
-            departmentIds: scopeDepartmentIds,
-            deviceTypes: scopeDeviceTypes,
-          },
-          isActive: true,
-        }),
-      });
-      if (!res.ok) throw new Error("create_template_failed");
-      setNewTemplateName("");
-      setNewTemplateDescription("");
-      setNewTemplateProfileIds([]);
-      await fetchRoleTemplates();
-      await fetchConfigAudits();
-      success("Đã tạo", "Role template mới đã được tạo");
-    } catch (e) {
-      console.error("Create role template error", e);
-      error("Lỗi", "Không thể tạo role template");
-    }
-  };
-
-  const handleApplyRoleTemplateToUser = async () => {
-    if (!selectedTemplateId || !selectedTemplateUserId) {
-      error("Lỗi", "Vui lòng chọn template và người dùng");
-      return;
-    }
-    const template = roleTemplates.find((it) => it.id === selectedTemplateId);
-    const targetUser = users.find((it) => it.id === selectedTemplateUserId);
-    if (!template || !targetUser) {
-      error("Lỗi", "Template hoặc người dùng không hợp lệ");
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/users/${targetUser.id}`, {
-        method: "PUT",
-        headers: actorHeaders(),
-        body: JSON.stringify({
-          profileIds: template.profileIds,
-        }),
-      });
-      if (!res.ok) throw new Error("apply_template_failed");
-
-      for (const profileId of template.profileIds) {
-        await fetch("/api/admin/scope-permissions", {
-          method: "POST",
-          headers: actorHeaders(),
-          body: JSON.stringify({
-            profileId,
-            branchIds: template.defaultScope.branchIds,
-            departmentIds: template.defaultScope.departmentIds,
-            deviceTypes: template.defaultScope.deviceTypes,
-            isActive: true,
-          }),
-        });
-      }
-
-      await fetchUsers();
-      await fetchScopePermissions();
-      await fetchConfigAudits();
-      success("Đã áp dụng", `Đã áp dụng template cho ${targetUser.fullName}`);
-    } catch (e) {
-      console.error("Apply template error", e);
-      error("Lỗi", "Không thể áp dụng role template");
-    }
-  };
-
-  const handleComparePermissions = async () => {
-    if (!diffLeftProfileId || !diffRightProfileId) {
-      error("Lỗi", "Vui lòng chọn đủ 2 profile để so sánh");
-      return;
-    }
-    try {
-      const res = await fetch(`/api/admin/permission-diff?leftProfileId=${encodeURIComponent(diffLeftProfileId)}&rightProfileId=${encodeURIComponent(diffRightProfileId)}`);
-      if (!res.ok) throw new Error("compare_failed");
-      const data = await res.json() as { diffs?: Array<{ permissionId: string; permissionName: string; module: string; leftEnabled: boolean; rightEnabled: boolean }> };
-      setPermissionDiffRows(data.diffs || []);
-      info("Kết quả", `Tìm thấy ${data.diffs?.length || 0} khác biệt quyền`);
-    } catch (e) {
-      console.error("Compare permissions error", e);
-      error("Lỗi", "Không thể so sánh quyền");
     }
   };
 
@@ -1448,12 +1379,12 @@ export default function AdminTab() {
     if (!selectedScopeProfileId || !currentScope) {
       setScopeBranchIds([]);
       setScopeDepartmentIds([]);
-      setScopeDeviceTypes([]);
+      setScopeDeviceIds([]);
       return;
     }
     setScopeBranchIds(currentScope.branchIds || []);
     setScopeDepartmentIds(currentScope.departmentIds || []);
-    setScopeDeviceTypes(currentScope.deviceTypes || []);
+    setScopeDeviceIds(currentScope.deviceIds || []);
   }, [selectedScopeProfileId, scopePermissions]);
 
   // ============ RENDER SECTIONS ============
@@ -2111,6 +2042,23 @@ export default function AdminTab() {
 
   const renderProfilesSection = () => (
     <div className="space-y-4">
+        <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-100 inline-flex gap-2">
+          <button
+            onClick={() => setPermissionSubTab("profile_config")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${permissionSubTab === "profile_config" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            Cấu hình Profiles
+          </button>
+          <button
+            onClick={() => setPermissionSubTab("data_scope")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${permissionSubTab === "data_scope" ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            Phạm vi dữ liệu
+          </button>
+        </div>
+
+        {permissionSubTab === "profile_config" && (
+        <>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
         <div className="relative flex-1 min-w-48">
@@ -2142,8 +2090,7 @@ export default function AdminTab() {
               detailedPermissions: DEFAULT_DETAILED_PERMISSIONS.map(p => ({ ...p, enabled: false })),
               createdAt: ""
             };
-            setEditingProfile(newProfile); 
-            setShowProfileModal(true); 
+            openProfileModalWithScope(newProfile);
           }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all"
           style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}
@@ -2191,8 +2138,7 @@ export default function AdminTab() {
                             ...p, 
                             detailedPermissions: p.detailedPermissions || DEFAULT_DETAILED_PERMISSIONS.map(d => ({ ...d, enabled: d.enabled })) 
                           };
-                          setEditingProfile(profileToEdit); 
-                          setShowProfileModal(true); 
+                          openProfileModalWithScope(profileToEdit);
                         }}
                         className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                         title="Chỉnh sửa"
@@ -2244,7 +2190,7 @@ export default function AdminTab() {
                   </h3>
                 </div>
                 <button 
-                  onClick={() => { setShowProfileModal(false); setEditingProfile(null); }} 
+                  onClick={() => { setShowProfileModal(false); setEditingProfile(null); setProfileModalTab("function"); }} 
                   className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
                 >
                   <X size={20} className="text-white" />
@@ -2287,8 +2233,25 @@ export default function AdminTab() {
                 </div>
               </div>
 
+              <div className="inline-flex gap-2 p-1 rounded-xl bg-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setProfileModalTab("function")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${profileModalTab === "function" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-200"}`}
+                >
+                  Tab 1: Cấu hình Profiles
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProfileModalTab("data_scope")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${profileModalTab === "data_scope" ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-200"}`}
+                >
+                  Tab 2: Phạm vi dữ liệu
+                </button>
+              </div>
+
               {/* Detailed Permission Matrix */}
-              <div>
+              <div className={profileModalTab === "function" ? "block" : "hidden"}>
                 <label className="block text-sm font-semibold text-slate-600 mb-3">Ma trận phân quyền</label>
                 <div className="space-y-3">
                   {/* MODULE 1: QUẢN LÝ CHUNG */}
@@ -2638,10 +2601,100 @@ export default function AdminTab() {
                   </div>
                 </div>
               </div>
+
+              <div className={profileModalTab === "data_scope" ? "space-y-4" : "hidden"}>
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
+                  <h4 className="font-semibold text-indigo-900 mb-1">Giới hạn phạm vi dữ liệu theo Profile</h4>
+                  <p className="text-xs text-indigo-700">Cấu hình này quyết định profile được nhìn thấy chi nhánh, khoa phòng và thiết bị nào.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="border border-slate-200 rounded-xl p-4">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                      <input
+                        type="checkbox"
+                        checked={branches.length > 0 && branches.every((branch) => modalScopeBranchIds.includes(branch.id))}
+                        onChange={(e) => setModalScopeBranchIds(e.target.checked ? branches.map((branch) => branch.id) : [])}
+                      />
+                      Chọn tất cả Chi nhánh
+                    </label>
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
+                      {branches.map((branch) => (
+                        <label key={branch.id} className="flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={modalScopeBranchIds.includes(branch.id)}
+                            onChange={() => setModalScopeBranchIds((prev) => toggleArraySelection(prev, branch.id))}
+                          />
+                          {branch.code} - {branch.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl p-4">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                      <input
+                        type="checkbox"
+                        checked={(() => {
+                          const selectable = getDepartmentsByBranchIds(modalScopeBranchIds);
+                          return selectable.length > 0 && selectable.every((dept) => modalScopeDepartmentIds.includes(dept.id));
+                        })()}
+                        onChange={(e) => {
+                          const selectable = getDepartmentsByBranchIds(modalScopeBranchIds);
+                          setModalScopeDepartmentIds(e.target.checked ? selectable.map((dept) => dept.id) : []);
+                        }}
+                      />
+                      Chọn tất cả Khoa phòng
+                    </label>
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
+                      {getDepartmentsByBranchIds(modalScopeBranchIds).map((dept) => (
+                        <label key={dept.id} className="flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={modalScopeDepartmentIds.includes(dept.id)}
+                            onChange={() => setModalScopeDepartmentIds((prev) => toggleArraySelection(prev, dept.id))}
+                          />
+                          {dept.code} - {dept.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl p-4">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                      <input
+                        type="checkbox"
+                        checked={(() => {
+                          const selectable = getDevicesByScopeFilter(modalScopeBranchIds, modalScopeDepartmentIds);
+                          return selectable.length > 0 && selectable.every((device) => modalScopeDeviceIds.includes(device.id));
+                        })()}
+                        onChange={(e) => {
+                          const selectable = getDevicesByScopeFilter(modalScopeBranchIds, modalScopeDepartmentIds);
+                          setModalScopeDeviceIds(e.target.checked ? selectable.map((device) => device.id) : []);
+                        }}
+                      />
+                      Chọn tất cả Thiết bị
+                    </label>
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
+                      {getDevicesByScopeFilter(modalScopeBranchIds, modalScopeDepartmentIds).map((device) => (
+                        <label key={device.id} className="flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={modalScopeDeviceIds.includes(device.id)}
+                            onChange={() => setModalScopeDeviceIds((prev) => toggleArraySelection(prev, device.id))}
+                          />
+                          {device.code} - {device.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 flex-shrink-0">
               <button
-                onClick={() => { setShowProfileModal(false); setEditingProfile(null); }}
+                onClick={() => { setShowProfileModal(false); setEditingProfile(null); setProfileModalTab("function"); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
               >
                 Hủy bỏ
@@ -2658,6 +2711,10 @@ export default function AdminTab() {
           </div>
         </div>
       )}
+      </>
+      )}
+
+      {permissionSubTab === "data_scope" && renderDataScopeSection()}
     </div>
   );
 
@@ -4256,7 +4313,14 @@ export default function AdminTab() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="border border-slate-200 rounded-xl p-4">
-            <h4 className="font-semibold text-slate-700 mb-3">Chi nhánh</h4>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+              <input
+                type="checkbox"
+                checked={branches.length > 0 && branches.every((branch) => scopeBranchIds.includes(branch.id))}
+                onChange={(e) => setScopeBranchIds(e.target.checked ? branches.map((branch) => branch.id) : [])}
+              />
+              Chọn tất cả Chi nhánh
+            </label>
             <div className="space-y-2 max-h-56 overflow-y-auto">
               {branches.map((branch) => (
                 <label key={branch.id} className="flex items-center gap-2 text-sm text-slate-700">
@@ -4272,9 +4336,22 @@ export default function AdminTab() {
           </div>
 
           <div className="border border-slate-200 rounded-xl p-4">
-            <h4 className="font-semibold text-slate-700 mb-3">Khoa phòng</h4>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+              <input
+                type="checkbox"
+                checked={(() => {
+                  const selectable = getDepartmentsByBranchIds(scopeBranchIds);
+                  return selectable.length > 0 && selectable.every((dept) => scopeDepartmentIds.includes(dept.id));
+                })()}
+                onChange={(e) => {
+                  const selectable = getDepartmentsByBranchIds(scopeBranchIds);
+                  setScopeDepartmentIds(e.target.checked ? selectable.map((dept) => dept.id) : []);
+                }}
+              />
+              Chọn tất cả Khoa phòng
+            </label>
             <div className="space-y-2 max-h-56 overflow-y-auto">
-              {departments.map((dept) => (
+              {getDepartmentsByBranchIds(scopeBranchIds).map((dept) => (
                 <label key={dept.id} className="flex items-center gap-2 text-sm text-slate-700">
                   <input
                     type="checkbox"
@@ -4288,16 +4365,29 @@ export default function AdminTab() {
           </div>
 
           <div className="border border-slate-200 rounded-xl p-4">
-            <h4 className="font-semibold text-slate-700 mb-3">Loại thiết bị</h4>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+              <input
+                type="checkbox"
+                checked={(() => {
+                  const selectable = getDevicesByScopeFilter(scopeBranchIds, scopeDepartmentIds);
+                  return selectable.length > 0 && selectable.every((device) => scopeDeviceIds.includes(device.id));
+                })()}
+                onChange={(e) => {
+                  const selectable = getDevicesByScopeFilter(scopeBranchIds, scopeDepartmentIds);
+                  setScopeDeviceIds(e.target.checked ? selectable.map((device) => device.id) : []);
+                }}
+              />
+              Chọn tất cả Thiết bị
+            </label>
             <div className="space-y-2 max-h-56 overflow-y-auto">
-              {deviceTypes.map((group) => (
-                <label key={group} className="flex items-center gap-2 text-sm text-slate-700">
+              {getDevicesByScopeFilter(scopeBranchIds, scopeDepartmentIds).map((device) => (
+                <label key={device.id} className="flex items-center gap-2 text-sm text-slate-700">
                   <input
                     type="checkbox"
-                    checked={scopeDeviceTypes.includes(group)}
-                    onChange={() => setScopeDeviceTypes((prev) => toggleArraySelection(prev, group))}
+                    checked={scopeDeviceIds.includes(device.id)}
+                    onChange={() => setScopeDeviceIds((prev) => toggleArraySelection(prev, device.id))}
                   />
-                  {group}
+                  {device.code} - {device.name}
                 </label>
               ))}
             </div>
@@ -4325,7 +4415,7 @@ export default function AdminTab() {
                 <th className="text-left px-3 py-2">Profile</th>
                 <th className="text-left px-3 py-2">Chi nhánh</th>
                 <th className="text-left px-3 py-2">Khoa phòng</th>
-                <th className="text-left px-3 py-2">Loại thiết bị</th>
+                <th className="text-left px-3 py-2">Thiết bị</th>
               </tr>
             </thead>
             <tbody>
@@ -4334,168 +4424,7 @@ export default function AdminTab() {
                   <td className="px-3 py-2">{item.profileName || item.profileId}</td>
                   <td className="px-3 py-2">{item.branchIds.length}</td>
                   <td className="px-3 py-2">{item.departmentIds.length}</td>
-                  <td className="px-3 py-2">{item.deviceTypes.length}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderRoleTemplatesSection = () => (
-    <div className="space-y-4">
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-          <CheckSquare size={18} className="text-violet-600" />
-          Role Template
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <input
-            type="text"
-            value={newTemplateName}
-            onChange={(e) => setNewTemplateName(e.target.value)}
-            placeholder="Tên template"
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          />
-          <input
-            type="text"
-            value={newTemplateDescription}
-            onChange={(e) => setNewTemplateDescription(e.target.value)}
-            placeholder="Mô tả"
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          />
-          <button
-            onClick={handleCreateRoleTemplate}
-            className="px-4 py-2.5 rounded-xl text-white font-semibold text-sm"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-          >
-            Tạo Template
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="border border-slate-200 rounded-xl p-4">
-            <h4 className="font-semibold text-slate-700 mb-2">Profile áp dụng</h4>
-            <div className="space-y-2 max-h-44 overflow-y-auto">
-              {profiles.map((profile) => (
-                <label key={profile.id} className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={newTemplateProfileIds.includes(profile.id)}
-                    onChange={() => setNewTemplateProfileIds((prev) => toggleArraySelection(prev, profile.id))}
-                  />
-                  {profile.code} - {profile.name}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="border border-slate-200 rounded-xl p-4">
-            <h4 className="font-semibold text-slate-700 mb-2">Áp dụng nhanh cho user mới</h4>
-            <div className="space-y-3">
-              <select
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-              >
-                <option value="">-- Chọn template --</option>
-                {roleTemplates.map((it) => (
-                  <option key={it.id} value={it.id}>{it.code} - {it.name}</option>
-                ))}
-              </select>
-              <select
-                value={selectedTemplateUserId}
-                onChange={(e) => setSelectedTemplateUserId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-              >
-                <option value="">-- Chọn người dùng --</option>
-                {users.map((it) => (
-                  <option key={it.id} value={it.id}>{it.fullName} ({it.username})</option>
-                ))}
-              </select>
-              <button
-                onClick={handleApplyRoleTemplateToUser}
-                className="w-full px-4 py-2.5 rounded-xl text-white font-semibold text-sm"
-                style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}
-              >
-                Áp dụng template
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50">
-                <th className="text-left px-3 py-2">Mã</th>
-                <th className="text-left px-3 py-2">Tên template</th>
-                <th className="text-left px-3 py-2">Số profile</th>
-                <th className="text-left px-3 py-2">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roleTemplates.map((it) => (
-                <tr key={it.id} className="border-t border-slate-100">
-                  <td className="px-3 py-2">{it.code}</td>
-                  <td className="px-3 py-2">{it.name}</td>
-                  <td className="px-3 py-2">{it.profileIds.length}</td>
-                  <td className="px-3 py-2">{it.isActive ? "Hoạt động" : "Không hoạt động"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-        <h3 className="font-bold text-slate-800 mb-4">So sánh quyền (Permission Diff)</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          <select
-            value={diffLeftProfileId}
-            onChange={(e) => setDiffLeftProfileId(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          >
-            <option value="">Profile trái</option>
-            {profiles.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-          </select>
-          <select
-            value={diffRightProfileId}
-            onChange={(e) => setDiffRightProfileId(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          >
-            <option value="">Profile phải</option>
-            {profiles.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-          </select>
-          <button
-            onClick={handleComparePermissions}
-            className="px-4 py-2.5 rounded-xl text-white font-semibold text-sm"
-            style={{ background: "linear-gradient(135deg, #4f46e5, #4338ca)" }}
-          >
-            So sánh
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50">
-                <th className="text-left px-3 py-2">Permission</th>
-                <th className="text-left px-3 py-2">Module</th>
-                <th className="text-left px-3 py-2">Trái</th>
-                <th className="text-left px-3 py-2">Phải</th>
-              </tr>
-            </thead>
-            <tbody>
-              {permissionDiffRows.map((row) => (
-                <tr key={row.permissionId} className="border-t border-slate-100">
-                  <td className="px-3 py-2">{row.permissionName}</td>
-                  <td className="px-3 py-2">{row.module}</td>
-                  <td className="px-3 py-2">{row.leftEnabled ? "Cho phép" : "Không"}</td>
-                  <td className="px-3 py-2">{row.rightEnabled ? "Cho phép" : "Không"}</td>
+                  <td className="px-3 py-2">{item.deviceIds?.length || 0}</td>
                 </tr>
               ))}
             </tbody>
@@ -4611,10 +4540,6 @@ export default function AdminTab() {
         return renderSuppliersSection();
       case "history_config":
         return renderHistoryConfigSection();
-      case "data_scope":
-        return renderDataScopeSection();
-      case "role_templates":
-        return renderRoleTemplatesSection();
       case "security_policy":
         return renderSecurityPolicySection();
       case "config_audit":

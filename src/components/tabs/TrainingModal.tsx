@@ -674,6 +674,221 @@ export default function TrainingModal({
         u.employeeId.toLowerCase().includes(traineeSearch.toLowerCase()))
   );
 
+  // Table column definitions (SmartTable: filterable + settings + export)
+  const planColumns: Column<TrainingPlan>[] = [
+    { key: "planCode", label: "Mã kế hoạch", sortable: true, filterable: true },
+    { key: "topic", label: "Chủ đề", sortable: true, filterable: true },
+    { key: "instructorName", label: "Giảng viên", sortable: true, filterable: true },
+    { key: "trainingDate", label: "Ngày đào tạo", sortable: true, filterable: true, dateFilter: true },
+    {
+      key: "trainees",
+      label: "Số HV",
+      sortable: true,
+      render: (item) => (
+        <span className="inline-flex items-center gap-1 text-slate-700"><Users size={14} />{item.trainees.length}</span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Trạng thái",
+      sortable: true,
+      filterable: true,
+      render: (item) => getStatusBadge(item.status),
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      render: (item) => (
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => {
+              onEditingPlanChange(item.id);
+              setPlanForm({
+                topic: item.topic,
+                instructorType: item.instructorType,
+                instructorName: item.instructorName,
+                trainingDate: item.trainingDate,
+                trainingTime: item.trainingTime || "",
+                location: item.location,
+                approver: item.approver,
+                selectedTrainees: item.trainees,
+                notes: item.notes || "",
+              });
+              setViewMode("form");
+            }}
+            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+            title="Chỉnh sửa"
+          >
+            <Edit size={16} />
+          </button>
+          <button
+            onClick={() => {
+              setViewingDoc(null);
+              setShowDocViewer(true);
+            }}
+            className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+            title="Xem"
+          >
+            <Eye size={16} />
+          </button>
+          {item.status === "Chờ duyệt" && (
+            <button
+              onClick={() => handleApprovePlan(item)}
+              className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+              title="Phê duyệt"
+            >
+              <Check size={16} />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const docColumns: Column<TrainingDocument>[] = [
+    { key: "documentCode", label: "Mã", sortable: true, filterable: true },
+    { key: "documentName", label: "Tên tài liệu", sortable: true, filterable: true },
+    {
+      key: "documentType",
+      label: "Loại",
+      sortable: true,
+      filterable: true,
+      render: (item) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          item.documentType === "SOP"
+            ? "bg-blue-100 text-blue-700"
+            : item.documentType === "Slide"
+            ? "bg-purple-100 text-purple-700"
+            : item.documentType === "User Manual"
+            ? "bg-green-100 text-green-700"
+            : "bg-slate-100 text-slate-700"
+        }`}>
+          {item.documentType}
+        </span>
+      ),
+    },
+    { key: "uploadedBy", label: "Người tải", sortable: true, filterable: true },
+    {
+      key: "uploadedAt",
+      label: "Ngày tải",
+      sortable: true,
+      filterable: true,
+      render: (item) => item.uploadedAt.split("T")[0],
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      render: (item) => (
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => {
+              setViewingDoc(item);
+              setShowDocViewer(true);
+            }}
+            className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+            title="Xem tài liệu"
+          >
+            <Eye size={16} />
+          </button>
+          <a
+            href={item.file.url}
+            download={item.file.name}
+            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
+            title="Tải về"
+          >
+            <Download size={16} />
+          </a>
+        </div>
+      ),
+    },
+  ];
+
+  const resultColumns: Column<TrainingResult>[] = [
+    { key: "id", label: "Mã kết quả", sortable: true, filterable: true },
+    { key: "planCode", label: "Kế hoạch", sortable: true, filterable: true },
+    { key: "trainingDate", label: "Ngày", sortable: true, filterable: true },
+    {
+      key: "attendees",
+      label: "Đạt/Không đạt",
+      render: (item) => {
+        const passed = item.attendees.filter((a) => a.result === "Đạt").length;
+        const failed = item.attendees.filter((a) => a.result === "Không đạt").length;
+        return (
+          <span className="text-sm">
+            <span className="text-green-600 font-semibold">{passed} Đạt</span>
+            {failed > 0 && <span className="text-red-600 font-semibold ml-2">{failed} Không đạt</span>}
+          </span>
+        );
+      },
+    },
+    { key: "recordedBy", label: "Người ghi nhận", sortable: true, filterable: true },
+    {
+      key: "actions",
+      label: "Thao tác",
+      render: () => (
+        <div className="flex justify-center gap-2">
+          <button className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Xem">
+            <Eye size={16} />
+          </button>
+          <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="In">
+            <Printer size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const resultPendingColumns: Column<TrainingPlan>[] = [
+    { key: "planCode", label: "Mã kế hoạch", sortable: true, filterable: true },
+    { key: "topic", label: "Chủ đề", sortable: true, filterable: true },
+    { key: "trainingDate", label: "Ngày", sortable: true, filterable: true },
+    {
+      key: "trainees",
+      label: "Số học viên",
+      render: (item) => <span className="text-slate-700">{item.trainees.length}</span>,
+    },
+    {
+      key: "status",
+      label: "Trạng thái",
+      sortable: true,
+      filterable: true,
+      render: (item) => getStatusBadge(item.status),
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      render: (item) => {
+        const hasResult = deviceResults.some((r) => r.planId === item.id);
+        if (hasResult) {
+          return (
+            <span className="text-green-600 text-sm inline-flex items-center gap-1">
+              <CheckCircle size={14} /> Đã ghi nhận
+            </span>
+          );
+        }
+        if (item.status !== "Đã duyệt") {
+          return <span className="text-slate-400 text-sm">—</span>;
+        }
+        return (
+          <button
+            onClick={() => {
+              setSelectedPlanForResult(item);
+              setResultForm({
+                attendeeResults: item.trainees.map((t) => ({ userId: t.userId, result: "Đạt" as const })),
+                attendanceFile: null,
+                certificateFile: null,
+                notes: "",
+              });
+            }}
+            className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm hover:bg-indigo-600 flex items-center gap-1 mx-auto"
+          >
+            <Plus size={14} /> Ghi nhận kết quả
+          </button>
+        );
+      },
+    },
+  ];
+
   // Tab definitions
   const tabs = [
     { id: "plans" as const, label: "Lên kế hoạch", icon: <Clock size={16} /> },
@@ -771,90 +986,20 @@ export default function TrainingModal({
                     </button>
                   </div>
 
-                  {/* Plans Table */}
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã kế hoạch</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Chủ đề</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Giảng viên</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Ngày dự kiến</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Số học viên</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Trạng thái</th>
-                          <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredPlans.map((plan) => (
-                          <tr key={plan.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-mono text-indigo-700">{plan.planCode}</td>
-                            <td className="px-4 py-3 text-slate-700">{plan.topic}</td>
-                            <td className="px-4 py-3 text-slate-600">{plan.instructorName}</td>
-                            <td className="px-4 py-3 text-slate-600">{plan.trainingDate}</td>
-                            <td className="px-4 py-3 text-slate-600">
-                              <div className="flex items-center gap-1">
-                                <Users size={14} />
-                                {plan.trainees.length}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">{getStatusBadge(plan.status)}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex justify-center gap-1">
-                                <button
-                                  onClick={() => {
-                                    onEditingPlanChange(plan.id);
-                                    setPlanForm({
-                                      topic: plan.topic,
-                                      instructorType: plan.instructorType,
-                                      instructorName: plan.instructorName,
-                                      trainingDate: plan.trainingDate,
-                                      trainingTime: plan.trainingTime || "",
-                                      location: plan.location,
-                                      approver: plan.approver,
-                                      selectedTrainees: plan.trainees,
-                                      notes: plan.notes || "",
-                                    });
-                                    setViewMode("form");
-                                  }}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                                  title="Chỉnh sửa"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setViewingDoc(null);
-                                    setShowDocViewer(true);
-                                  }}
-                                  className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
-                                  title="Xem chi tiết"
-                                >
-                                  <Eye size={16} />
-                                </button>
-                                {plan.status === "Chờ duyệt" && (
-                                  <button
-                                    onClick={() => handleApprovePlan(plan)}
-                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                                    title="Phê duyệt"
-                                  >
-                                    <Check size={16} />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        {filteredPlans.length === 0 && (
-                          <tr>
-                            <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                              Chưa có kế hoạch đào tạo nào
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                  <SmartTable
+                    data={filteredPlans}
+                    columns={planColumns}
+                    keyField="id"
+                    settingsKey={`device_${device.id}_training_plans`}
+                    defaultPageSize={10}
+                    onExport={() =>
+                      exportToExcel(
+                        `Dao_Tao_${device.code}`,
+                        ["Mã", "Chủ đề", "Giảng viên", "Ngày", "Trạng thái"],
+                        filteredPlans.map((p) => [p.planCode, p.topic, p.instructorName, p.trainingDate, p.status])
+                      )
+                    }
+                  />
                 </>
               ) : (
                 /* Plan Form */
@@ -1123,70 +1268,20 @@ export default function TrainingModal({
                 </div>
               </div>
 
-              {/* Documents Table */}
-              <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã tài liệu</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Tên tài liệu</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Loại</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Người tải</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Ngày tải</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredDocs.map((doc) => (
-                      <tr key={doc.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-mono text-slate-600 text-xs">{doc.documentCode}</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium">{doc.documentName}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            doc.documentType === "SOP" ? "bg-blue-100 text-blue-700" :
-                            doc.documentType === "Slide" ? "bg-purple-100 text-purple-700" :
-                            doc.documentType === "User Manual" ? "bg-green-100 text-green-700" :
-                            "bg-slate-100 text-slate-700"
-                          }`}>
-                            {doc.documentType}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">{doc.uploadedBy}</td>
-                        <td className="px-4 py-3 text-slate-600">{doc.uploadedAt.split("T")[0]}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-center gap-1">
-                            <button
-                              onClick={() => {
-                                setViewingDoc(doc);
-                                setShowDocViewer(true);
-                              }}
-                              className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
-                              title="Xem tài liệu"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <a
-                              href={doc.file.url}
-                              download={doc.file.name}
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
-                              title="Tải về"
-                            >
-                              <Download size={16} />
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredDocs.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                          Chưa có tài liệu đào tạo nào
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <SmartTable
+                data={filteredDocs}
+                columns={docColumns}
+                keyField="id"
+                settingsKey={`device_${device.id}_training_docs`}
+                defaultPageSize={10}
+                onExport={() =>
+                  exportToExcel(
+                    `Tai_Lieu_Dao_Tao_${device.code}`,
+                    ["Mã", "Tên tài liệu", "Loại", "Người tải", "Ngày"],
+                    filteredDocs.map((d) => [d.documentCode, d.documentName, d.documentType, d.uploadedBy, d.uploadedAt.split("T")[0]])
+                  )
+                }
+              />
             </div>
           )}
 
@@ -1207,118 +1302,25 @@ export default function TrainingModal({
                 </div>
               </div>
 
-              {/* Plans pending results */}
-              <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã kế hoạch</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Chủ đề</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Ngày đào tạo</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Số học viên</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Trạng thái</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {devicePlans
-                      .filter((p) => planFilter === "all" || p.status === planFilter)
-                      .filter((p) => p.status === "Đã duyệt" || p.status === "Hoàn thành")
-                      .map((plan) => {
-                        const hasResult = deviceResults.some((r) => r.planId === plan.id);
-                        return (
-                          <tr key={plan.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-mono text-indigo-700">{plan.planCode}</td>
-                            <td className="px-4 py-3 text-slate-700">{plan.topic}</td>
-                            <td className="px-4 py-3 text-slate-600">{plan.trainingDate}</td>
-                            <td className="px-4 py-3 text-slate-600">{plan.trainees.length}</td>
-                            <td className="px-4 py-3">{getStatusBadge(plan.status)}</td>
-                            <td className="px-4 py-3 text-center">
-                              {hasResult ? (
-                                <span className="text-green-600 text-sm flex items-center justify-center gap-1">
-                                  <CheckCircle size={14} />
-                                  Đã ghi nhận
-                                </span>
-                              ) : plan.status === "Đã duyệt" ? (
-                                <button
-                                  onClick={() => {
-                                    setSelectedPlanForResult(plan);
-                                    setResultForm({
-                                      attendeeResults: plan.trainees.map((t) => ({ userId: t.userId, result: "Đạt" as const })),
-                                      attendanceFile: null,
-                                      certificateFile: null,
-                                      notes: "",
-                                    });
-                                  }}
-                                  className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm hover:bg-indigo-600 flex items-center gap-1 mx-auto"
-                                >
-                                  <Plus size={14} />
-                                  Ghi nhận kết quả
-                                </button>
-                              ) : (
-                                <span className="text-slate-400 text-sm">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    {devicePlans.filter((p) => p.status === "Đã duyệt" || p.status === "Hoàn thành").length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                          Không có kế hoạch nào cần ghi nhận kết quả
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <SmartTable
+                data={devicePlans.filter((p) => (planFilter === "all" || p.status === planFilter) && (p.status === "Đã duyệt" || p.status === "Hoàn thành"))}
+                columns={resultPendingColumns}
+                keyField="id"
+                settingsKey={`device_${device.id}_training_pending_results`}
+                defaultPageSize={10}
+              />
 
               {/* Results History */}
               {deviceResults.length > 0 && (
                 <div className="mt-6">
                   <h4 className="text-sm font-semibold text-slate-700 mb-3">Lịch sử kết quả đào tạo</h4>
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã kết quả</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Kế hoạch</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Ngày đào tạo</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Đạt/Không đạt</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Người ghi nhận</th>
-                          <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {deviceResults.map((result) => {
-                          const passed = result.attendees.filter((a) => a.result === "Đạt").length;
-                          const failed = result.attendees.filter((a) => a.result === "Không đạt").length;
-                          return (
-                            <tr key={result.id} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 font-mono text-slate-600 text-xs">{result.id}</td>
-                              <td className="px-4 py-3 text-indigo-700">{result.planCode}</td>
-                              <td className="px-4 py-3 text-slate-600">{result.trainingDate}</td>
-                              <td className="px-4 py-3">
-                                <span className="text-green-600 font-medium">{passed} Đạt</span>
-                                {failed > 0 && <span className="text-red-600 font-medium ml-2">{failed} Không đạt</span>}
-                              </td>
-                              <td className="px-4 py-3 text-slate-600">{result.recordedBy}</td>
-                              <td className="px-4 py-3 text-center">
-                                <div className="flex justify-center gap-1">
-                                  <button className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Xem chi tiết">
-                                    <Eye size={16} />
-                                  </button>
-                                  <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="In kết quả">
-                                    <Printer size={16} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                  <SmartTable
+                    data={deviceResults}
+                    columns={resultColumns}
+                    keyField="id"
+                    settingsKey={`device_${device.id}_training_results_history`}
+                    defaultPageSize={10}
+                  />
                 </div>
               )}
             </div>

@@ -109,9 +109,6 @@ import {
   TrainingPlan,
   TrainingDocument,
   TrainingResult,
-  mockTrainingPlans,
-  mockTrainingDocuments,
-  mockTrainingResults,
 } from "@/lib/mockData";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -422,9 +419,22 @@ export default function DeviceProfileTab() {
   const returnHandoverAttachmentInputRef = useRef<HTMLInputElement>(null);
   const returnAcceptanceFormAttachmentInputRef = useRef<HTMLInputElement>(null);
   
-  const { devices: contextDevices, addDevice, updateDevice, incidents, schedules, addHistory } = useData();
+  const {
+    devices: contextDevices,
+    addDevice,
+    updateDevice,
+    incidents,
+    schedules,
+    trainingPlans: trainingPlansCtx,
+    trainingDocuments: trainingDocumentsCtx,
+    trainingResults: trainingResultsCtx,
+    addHistory,
+  } = useData();
   const [devices, setDevices] = useState<Device[]>([]);
   useEffect(() => { setDevices(contextDevices); }, [contextDevices]);
+  useEffect(() => { setTrainingPlans(trainingPlansCtx); }, [trainingPlansCtx]);
+  useEffect(() => { setTrainingDocuments(trainingDocumentsCtx); }, [trainingDocumentsCtx]);
+  useEffect(() => { setTrainingResults(trainingResultsCtx); }, [trainingResultsCtx]);
 
   // Listen for bypass event
   useEffect(() => {
@@ -482,9 +492,9 @@ export default function DeviceProfileTab() {
   // Transfer and liquidation workflow state
   const [transferRecords, setTransferRecords] = useState<TransferProposal[]>(mockTransferProposals);
   const [liquidationRecords, setLiquidationRecords] = useState<LiquidationProposal[]>(mockLiquidationProposals);
-  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>(mockTrainingPlans);
-  const [trainingDocuments, setTrainingDocuments] = useState<TrainingDocument[]>(mockTrainingDocuments);
-  const [trainingResults, setTrainingResults] = useState<TrainingResult[]>(mockTrainingResults);
+  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>([]);
+  const [trainingDocuments, setTrainingDocuments] = useState<TrainingDocument[]>([]);
+  const [trainingResults, setTrainingResults] = useState<TrainingResult[]>([]);
   const [transferCounter, setTransferCounter] = useState(3);
   const [liquidationCounter, setLiquidationCounter] = useState(3);
   const [planCounter, setPlanCounter] = useState(2);
@@ -1596,8 +1606,35 @@ export default function DeviceProfileTab() {
   };
 
   // Complete return acceptance - change status from "Tạm điều chuyển" to "Đang vận hành"
-  const completeReturnAcceptance = (deviceId: string) => {
+  const completeReturnAcceptance = async (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
+    const record = returnAcceptanceRecords[deviceId] || createDefaultReturnAcceptanceRecord();
+    try {
+      // Persist acceptance record for return flow (BM.07)
+      await fetch("/api/acceptance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recordType: "return",
+          deviceId,
+          deviceCode: device?.code || "",
+          deviceName: device?.name || "",
+          status: "completed",
+          returnReason: record.acceptanceForm?.note || "Tiếp nhận thiết bị sau điều chuyển",
+          deliveredBy: record.acceptanceForm?.handoverBy,
+          receivedBy: record.acceptanceForm?.receiver || user?.fullName,
+          transportDate: record.acceptanceForm?.receivedAt,
+          checklist: {
+            handoverCode: record.handoverCode,
+            acceptanceCode: record.acceptanceForm?.formCode,
+            attachments: record.acceptanceForm?.attachments || [],
+          },
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to persist return acceptance", err);
+    }
+
     updateDeviceStatus(deviceId, "Đang vận hành");
     addHistory({
       userId: user?.id ?? "",

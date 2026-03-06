@@ -143,6 +143,31 @@ export default function IncidentReportTab() {
   const [attachmentViewerTitle, setAttachmentViewerTitle] = useState("");
   const [attachmentViewerFiles, setAttachmentViewerFiles] = useState<AttachedFile[]>([]);
 
+  const withRequiredIncidentFields = (base: IncidentReport, patch: Partial<IncidentReport>): Partial<IncidentReport> => ({
+    deviceId: patch.deviceId ?? base.deviceId,
+    deviceCode: patch.deviceCode ?? base.deviceCode,
+    deviceName: patch.deviceName ?? base.deviceName,
+    description: patch.description ?? base.description,
+    immediateAction: patch.immediateAction ?? base.immediateAction,
+    incidentDateTime: patch.incidentDateTime ?? base.incidentDateTime,
+    specialty: patch.specialty ?? base.specialty,
+    supplier: patch.supplier ?? base.supplier,
+    discoveredBy: patch.discoveredBy ?? base.discoveredBy,
+    discoveredByRole: patch.discoveredByRole ?? base.discoveredByRole,
+    reportedBy: patch.reportedBy ?? base.reportedBy,
+    deviceManager: patch.deviceManager ?? base.deviceManager,
+    affectsPatientResult: patch.affectsPatientResult ?? base.affectsPatientResult,
+    requiresDeviceStop: patch.requiresDeviceStop ?? base.requiresDeviceStop,
+    stopFrom: patch.stopFrom ?? base.stopFrom,
+    stopTo: patch.stopTo ?? base.stopTo,
+    hasProposal: patch.hasProposal ?? base.hasProposal,
+    proposal: patch.proposal ?? base.proposal,
+    relatedUsers: patch.relatedUsers ?? base.relatedUsers,
+    severity: patch.severity ?? base.severity,
+    status: patch.status ?? base.status,
+    workOrders: patch.workOrders ?? base.workOrders,
+  });
+
   // Filtered incidents
   const filteredIncidents = useMemo(() => {
     return incidentReports.filter((incident) => {
@@ -401,7 +426,8 @@ export default function IncidentReportTab() {
         i.id === incident.id ? { ...i, ...finalSubmitUpdates } : i
       )
     );
-    updateIncident(incident.id, finalSubmitUpdates).catch(console.error);
+    const payload = withRequiredIncidentFields(incident, finalSubmitUpdates);
+    updateIncident(incident.id, payload).catch(console.error);
     
     // Send notification (simulated)
     info("Thông báo", `Đã gửi thông báo tới ${incident.deviceManager} và ${incident.reportedBy}`);
@@ -419,7 +445,8 @@ export default function IncidentReportTab() {
     setIncidentReports(
       incidentReports.map((i) => i.id === incident.id ? { ...i, ...approveUpdates } : i)
     );
-    updateIncident(incident.id, approveUpdates).catch(console.error);
+    const payload = withRequiredIncidentFields(incident, approveUpdates);
+    updateIncident(incident.id, payload).catch(console.error);
     
     // Add history log
     addHistory({
@@ -473,7 +500,8 @@ export default function IncidentReportTab() {
           : i
       )
     );
-    updateIncident(selectedIncident.id, { workOrders: updatedWorkOrders }).catch(console.error);
+    const payload = withRequiredIncidentFields(selectedIncident, { workOrders: updatedWorkOrders });
+    updateIncident(selectedIncident.id, payload).catch(console.error);
 
     setWorkOrderCounters({ ...workOrderCounters, [selectedIncident.reportCode]: newCounter });
     setWorkOrderForm({
@@ -518,7 +546,8 @@ export default function IncidentReportTab() {
           : i
       )
     );
-    updateIncident(selectedIncident.id, { workOrders: updatedWorkOrders || [] }).catch(console.error);
+    const payload = withRequiredIncidentFields(selectedIncident, { workOrders: updatedWorkOrders || [] });
+    updateIncident(selectedIncident.id, payload).catch(console.error);
 
     // Update selected incident to reflect changes
     const updated = incidentReports.find(i => i.id === selectedIncident.id);
@@ -561,7 +590,8 @@ export default function IncidentReportTab() {
     setIncidentReports(
       incidentReports.map((i) => i.id === incident.id ? { ...i, ...completeRepairUpdates } : i)
     );
-    updateIncident(incident.id, completeRepairUpdates).catch(console.error);
+    const payload = withRequiredIncidentFields(incident, completeRepairUpdates);
+    updateIncident(incident.id, payload).catch(console.error);
     
     // Add history log
     addHistory({
@@ -652,7 +682,7 @@ export default function IncidentReportTab() {
   // Update form state when editing
   const handleUpdateIncident = () => {
     if (!selectedIncident) return;
-    const updateData = { ...form, updatedAt: new Date().toISOString() };
+    const updateData = withRequiredIncidentFields(selectedIncident, { ...form, updatedAt: new Date().toISOString() });
     setIncidentReports(
       incidentReports.map((i) =>
         i.id === selectedIncident.id ? { ...i, ...updateData } : i

@@ -75,7 +75,13 @@ interface DataContextValue {
   addHistory: (log: Record<string, any>) => Promise<void>;
 
   // Training mutations
+  addTrainingDocument: (doc: Partial<TrainingDocument>) => Promise<TrainingDocument>;
+  updateTrainingDocument: (id: string, updates: Partial<TrainingDocument>) => Promise<TrainingDocument>;
+  addTrainingResult: (result: Partial<TrainingResult>) => Promise<TrainingResult>;
+  updateTrainingResult: (id: string, updates: Partial<TrainingResult>) => Promise<TrainingResult>;
   updateTrainingPlan: (id: string, updates: Partial<TrainingPlan>) => Promise<TrainingPlan>;
+  deleteTrainingDocument: (id: string) => Promise<void>;
+  deleteTrainingResult: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -137,7 +143,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const fetchIncidents = useCallback(async () => {
     setIncidentsLoading(true);
     try {
-      const data = await apiFetch<IncidentReport[]>("/api/incidents");
+      // Use pagination-friendly API to avoid loading unbounded datasets
+      const params = new URLSearchParams({ page: "1", pageSize: "200" });
+      const data = await apiFetch<IncidentReport[]>(`/api/incidents?${params.toString()}`);
       setIncidents(data);
     } catch (e) {
       console.error("Failed to fetch incidents", e);
@@ -197,16 +205,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const fetchTrainingData = useCallback(async () => {
     setTrainingLoading(true);
     try {
-      // Load training data from localStorage or use mock data
-      const storedPlans = localStorage.getItem('labhouse_training_plans');
-      if (storedPlans) {
-        setTrainingPlans(JSON.parse(storedPlans));
-      } else {
-        const { mockTrainingPlans, mockTrainingDocuments, mockTrainingResults } = await import("@/lib/mockData");
-        setTrainingPlans(mockTrainingPlans);
-        setTrainingDocuments(mockTrainingDocuments);
-        setTrainingResults(mockTrainingResults || []);
-      }
+      const [plans, documents, results] = await Promise.all([
+        apiFetch<TrainingPlan[]>("/api/training/plans"),
+        apiFetch<TrainingDocument[]>("/api/training/documents"),
+        apiFetch<TrainingResult[]>("/api/training/results"),
+      ]);
+      setTrainingPlans(plans);
+      setTrainingDocuments(documents);
+      setTrainingResults(results);
     } catch (e) {
       console.error("Failed to fetch training data", e);
     } finally {
@@ -229,33 +235,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshData();
-    
-    // Check for restore data on mount
-    const restoreData = localStorage.getItem('labhouse_restore_data');
-    if (restoreData) {
-      try {
-        const parsed = JSON.parse(restoreData);
-        // Restore data from backup
-        if (parsed.devices) setDevices(parsed.devices);
-        if (parsed.proposals) setProposals(parsed.proposals);
-        if (parsed.incidents) setIncidents(parsed.incidents);
-        if (parsed.schedules) setSchedules(parsed.schedules);
-        if (parsed.calibrationRequests) setCalibrationRequests(parsed.calibrationRequests);
-        if (parsed.calibrationResults) setCalibrationResults(parsed.calibrationResults);
-        if (parsed.history) setHistory(parsed.history);
-        // Clear restore data after successful restore
-        localStorage.removeItem('labhouse_restore_data');
-        console.log('Data restored successfully');
-      } catch (err) {
-        console.error('Failed to restore data:', err);
-        localStorage.removeItem('labhouse_restore_data');
-      }
-    }
   }, [refreshData]);
 
   const loading =
     devicesLoading || proposalsLoading || incidentsLoading || schedulesLoading || 
-    calibrationRequestsLoading || calibrationResultsLoading || historyLoading;
+    calibrationRequestsLoading || calibrationResultsLoading || historyLoading || trainingLoading;
 
   // Device mutations
   const addDevice = useCallback(async (device: Omit<Device, "id">) => {
@@ -423,13 +407,64 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Training mutations
-  const updateTrainingPlan = useCallback(async (id: string, updates: Partial<TrainingPlan>) => {
-    setTrainingPlans(prev => {
-      const updated = prev.map(p => p.id === id ? { ...p, ...updates } : p);
-      localStorage.setItem('labhouse_training_plans', JSON.stringify(updated));
-      return updated;
+  const addTrainingDocument = useCallback(async (doc: Partial<TrainingDocument>) => {
+    const created = await apiFetch<TrainingDocument>("/api/training/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(doc),
     });
-    return { id, ...updates } as TrainingPlan;
+    setTrainingDocuments((prev) => [created, ...prev]);
+    return created;
+  }, []);
+
+  const updateTrainingDocument = useCallback(async (id: string, updates: Partial<TrainingDocument>) => {
+    const updated = await apiFetch<TrainingDocument>(`/api/training/documents/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    setTrainingDocuments((prev) => prev.map((d) => (d.id === id ? updated : d)));
+    return updated;
+  }, []);
+
+  const addTrainingResult = useCallback(async (result: Partial<TrainingResult>) => {
+    const created = await apiFetch<TrainingResult>("/api/training/results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(result),
+    });
+    setTrainingResults((prev) => [created, ...prev]);
+    return created;
+  }, []);
+
+  const updateTrainingResult = useCallback(async (id: string, updates: Partial<TrainingResult>) => {
+    const updated = await apiFetch<TrainingResult>(`/api/training/results/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    setTrainingResults((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    return updated;
+  }, []);
+
+  const updateTrainingPlan = useCallback(async (id: string, updates: Partial<TrainingPlan>) => {
+    const updated = await apiFetch<TrainingPlan>(`/api/training/plans/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    setTrainingPlans(prev => prev.map(p => (p.id === id ? updated : p)));
+    return updated;
+  }, []);
+
+  const deleteTrainingDocument = useCallback(async (id: string) => {
+    await apiFetch(`/api/training/documents/${id}`, { method: "DELETE" });
+    setTrainingDocuments((prev) => prev.filter((d) => d.id !== id));
+  }, []);
+
+  const deleteTrainingResult = useCallback(async (id: string) => {
+    await apiFetch(`/api/training/results/${id}`, { method: "DELETE" });
+    setTrainingResults((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
   return (
@@ -474,7 +509,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateCalibrationResult,
         deleteCalibrationResult,
         addHistory,
+        addTrainingDocument,
+        updateTrainingDocument,
+        addTrainingResult,
+        updateTrainingResult,
         updateTrainingPlan,
+        deleteTrainingDocument,
+        deleteTrainingResult,
       }}
     >
       {children}

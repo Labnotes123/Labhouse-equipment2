@@ -1429,8 +1429,8 @@ export default function AdminTab() {
 
       {/* User Modal */}
       {showUserModal && editingUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -1960,8 +1960,8 @@ export default function AdminTab() {
 
       {/* Profile Modal */}
       {showProfileModal && editingProfile && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -2466,8 +2466,8 @@ export default function AdminTab() {
 
       {/* Branch Modal */}
       {showBranchModal && editingBranch && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-green-500 to-emerald-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2618,8 +2618,8 @@ export default function AdminTab() {
 
       {/* Department Modal */}
       {showDepartmentModal && editingDepartment && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-orange-500 to-amber-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2788,8 +2788,8 @@ export default function AdminTab() {
 
       {/* Position Modal */}
       {showPositionModal && editingPosition && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-cyan-500 to-blue-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -2990,8 +2990,8 @@ export default function AdminTab() {
 
       {/* Install Location Modal */}
       {showInstallLocationModal && editingInstallLocation && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-teal-500 to-emerald-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -3233,8 +3233,8 @@ export default function AdminTab() {
 
       {/* Supplier Modal */}
       {showSupplierModal && editingSupplier && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-pink-500 to-rose-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -3699,7 +3699,7 @@ export default function AdminTab() {
 
         {/* Restore Confirmation Modal */}
         {showRestoreConfirm && pendingRestoreData && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
             <div className="bg-white rounded-2xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
@@ -3897,8 +3897,8 @@ export default function AdminTab() {
 
       {/* Delete History Modal */}
       {showDeleteHistoryModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-[92vw] max-w-[1800px] h-[88vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-slate-500 to-slate-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -4034,7 +4034,7 @@ export default function AdminTab() {
         {/* Content */}
         <div className="lg:col-span-3">
           {activeSection ? (
-            <div className="fade-in">
+            <div>
               <div className="flex items-center gap-3 mb-4">
                 {sections.find((s) => s.id === activeSection) && (
                   <>

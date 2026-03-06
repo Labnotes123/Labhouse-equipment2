@@ -583,7 +583,7 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                       <label className="block text-sm font-medium text-slate-700 mb-1">Mã yêu cầu hiệu chuẩn</label>
                       <input
                         type="text"
-                        value={requestCode}
+                        value={nextRequestCode}
                         readOnly
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm font-mono"
                       />

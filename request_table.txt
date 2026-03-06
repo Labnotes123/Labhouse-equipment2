@@ -1,0 +1,67 @@
+                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã yêu cầu</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Tên thiết bị</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã thiết bị</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Serial</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Nội dung</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Trạng thái</th>
+                          <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {calibrationRequests.filter((r) => r.deviceId === device.id).length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                              <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                              <p>Chưa có yêu cầu hiệu chuẩn nào</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          calibrationRequests
+                            .filter((r) => r.deviceId === device.id)
+                            .map((req) => (
+                              <tr key={req.id} className="hover:bg-slate-50">
+                                <td className="px-4 py-3 font-mono text-purple-600">{req.requestCode}</td>
+                                <td className="px-4 py-3">{req.deviceName}</td>
+                                <td className="px-4 py-3">{req.deviceCode}</td>
+                                <td className="px-4 py-3">{req.serialNumber}</td>
+                                <td className="px-4 py-3">{req.content}</td>
+                                <td className="px-4 py-3">
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      req.status === "Hoàn thành"
+                                        ? "bg-green-100 text-green-700"
+                                        : req.status === "Đã duyệt"
+                                          ? "bg-blue-100 text-blue-700"
+                                          : req.status === "Chờ duyệt"
+                                            ? "bg-amber-100 text-amber-700"
+                                            : "bg-slate-100 text-slate-700"
+                                    }`}
+                                  >
+                                    {req.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <div className="flex justify-center gap-2">
+                                    <button className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Xem chi tiết">
+                                      <Eye size={16} />
+                                    </button>
+                                    <button className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Xuất PDF">
+                                      <FileText size={16} />
+                                    </button>
+                                    {req.status === "Chờ duyệt" && (
+                                      <button className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Phê duyệt">
+                                        <CheckCircle2 size={16} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>

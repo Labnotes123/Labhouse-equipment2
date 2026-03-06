@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { nextTicketCode, type TicketCounterState, buildTicketCode } from "@/lib/ticket-code";
 import {
   mockProposals,
   mockIncidents,
@@ -22,6 +23,7 @@ import {
 // Minimal types for new persisted entities (UI currently defines richer shapes locally).
 export interface AcceptanceRecord {
   id: string;
+  acceptanceCode: string;
   deviceId: string;
   deviceCode: string;
   deviceName: string;
@@ -85,6 +87,7 @@ type OpsStore = {
   trainingPlans: TrainingPlan[];
   trainingDocuments: TrainingDocument[];
   trainingResults: TrainingResult[];
+  ticketCounters: TicketCounterState;
 };
 
 const STORE_KEY = "__device_ops_store__";
@@ -94,6 +97,7 @@ const DATA_FILE = path.join(DATA_DIR, "device-ops-store.json");
 const defaultAcceptanceRecords: AcceptanceRecord[] = [
   {
     id: "acc_1",
+    acceptanceCode: buildTicketCode("TB-001", "PTN", 1, new Date().getFullYear()),
     deviceId: "d1",
     deviceCode: "TB-001",
     deviceName: "Máy phân tích huyết học tự động",
@@ -107,7 +111,7 @@ const defaultAcceptanceRecords: AcceptanceRecord[] = [
 const defaultTransferProposals: TransferProposal[] = [
   {
     id: "tr1",
-    transferCode: "DC-2026-001",
+    transferCode: buildTicketCode("TB-001", "PDC", 1, new Date().getFullYear()),
     deviceId: "d1",
     deviceCode: "TB-001",
     deviceName: "Máy phân tích huyết học tự động",
@@ -125,7 +129,7 @@ const defaultTransferProposals: TransferProposal[] = [
 const defaultLiquidationProposals: LiquidationProposal[] = [
   {
     id: "tl1",
-    liquidationCode: "TL-2026-001",
+    liquidationCode: buildTicketCode("TB-006", "PTL", 1, new Date().getFullYear()),
     deviceId: "d6",
     deviceCode: "TB-006",
     deviceName: "Tủ an toàn sinh học cấp II",
@@ -152,6 +156,7 @@ const DEFAULT_STORE: OpsStore = {
   trainingPlans: [...mockTrainingPlans],
   trainingDocuments: [...mockTrainingDocuments],
   trainingResults: [...mockTrainingResults],
+  ticketCounters: {} as TicketCounterState,
 };
 
 function loadFromDisk(): OpsStore {
@@ -173,6 +178,7 @@ function loadFromDisk(): OpsStore {
         trainingPlans: parsed.trainingPlans ?? DEFAULT_STORE.trainingPlans,
         trainingDocuments: parsed.trainingDocuments ?? DEFAULT_STORE.trainingDocuments,
         trainingResults: parsed.trainingResults ?? DEFAULT_STORE.trainingResults,
+        ticketCounters: parsed.ticketCounters ?? DEFAULT_STORE.ticketCounters,
       };
     }
   } catch (err) {
@@ -197,11 +203,52 @@ function getStore(): OpsStore {
   if (!globalAny[STORE_KEY]) {
     globalAny[STORE_KEY] = loadFromDisk();
   }
+  if (!globalAny[STORE_KEY]!.ticketCounters || Object.keys(globalAny[STORE_KEY]!.ticketCounters).length === 0) {
+    globalAny[STORE_KEY]!.ticketCounters = rebuildTicketCounters(globalAny[STORE_KEY]!);
+  }
   return globalAny[STORE_KEY]!;
+}
+
+function takeTicketCode(store: OpsStore, deviceCode: string, type: Parameters<typeof nextTicketCode>[1]): string {
+  const { code, counters } = nextTicketCode(deviceCode || "NO-CODE", type, store.ticketCounters);
+  store.ticketCounters = counters;
+  return code;
 }
 
 function makeId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function rebuildTicketCounters(store: OpsStore): TicketCounterState {
+  const counters: Partial<TicketCounterState> = {};
+  const bump = (type: keyof TicketCounterState, code?: string) => {
+    if (!code) return;
+    const match = code.match(/^(.*)-([A-Z]{3})-(\d{4})-(\d{3})$/);
+    if (!match) return;
+    const [, , codeType, yearStr, seqStr] = match;
+    if (codeType !== type) return;
+    const year = Number(yearStr);
+    const seq = Number(seqStr);
+    const existing = counters[type];
+    if (!existing || year > existing.year || (year === existing.year && seq > existing.seq)) {
+      counters[type] = { year, seq } as TicketCounterState[keyof TicketCounterState];
+    }
+  };
+
+  store.acceptanceRecords.forEach((r) => bump("PTN", r.acceptanceCode));
+  store.incidents.forEach((i) => bump("PSC", i.reportCode));
+  store.calibrationRequests.forEach((r) => bump("PHC", (r as any).requestCode));
+  store.liquidationProposals.forEach((l) => bump("PTL", l.liquidationCode));
+  store.transferProposals.forEach((t) => bump("PDC", t.transferCode));
+  store.trainingPlans.forEach((p) => bump("PDT", p.planCode));
+
+  // Ensure defaults exist for all ticket types
+  const nowYear = new Date().getFullYear();
+  const types: (keyof TicketCounterState)[] = ["PTN", "PSC", "PHC", "PTL", "PBD", "PDT", "PDC"];
+  types.forEach((t) => {
+    if (!counters[t]) counters[t] = { year: nowYear, seq: 0 } as TicketCounterState[keyof TicketCounterState];
+  });
+  return counters as TicketCounterState;
 }
 
 // === Proposals ===
@@ -280,9 +327,11 @@ export function findIncident(id: string): IncidentReport | undefined {
 }
 
 export function createIncident(payload: Partial<IncidentReport>): IncidentReport {
+  const store = getStore();
+  const reportCode = payload.reportCode || takeTicketCode(store, payload.deviceCode || payload.deviceId || "", "PSC");
   const incident: IncidentReport = {
     id: payload.id || makeId("incident"),
-    reportCode: payload.reportCode || `PSC-${new Date().getFullYear()}-${Date.now()}`,
+    reportCode,
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
@@ -324,7 +373,6 @@ export function createIncident(payload: Partial<IncidentReport>): IncidentReport
     workOrders: payload.workOrders || [],
   } as IncidentReport;
 
-  const store = getStore();
   store.incidents = [incident, ...store.incidents];
   persist(store);
   return incident;
@@ -421,10 +469,12 @@ export function findCalibrationRequest(id: string): CalibrationRequest | undefin
 }
 
 export function createCalibrationRequest(payload: Partial<CalibrationRequest>): CalibrationRequest {
+  const store = getStore();
   const now = new Date().toISOString();
+  const requestCode = payload.requestCode || takeTicketCode(store, payload.deviceCode || payload.deviceId || "", "PHC");
   const request: CalibrationRequest = {
     id: payload.id || makeId("phc"),
-    requestCode: payload.requestCode || `PHC-${Date.now()}`,
+    requestCode,
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
@@ -450,7 +500,6 @@ export function createCalibrationRequest(payload: Partial<CalibrationRequest>): 
     updatedAt: payload.updatedAt,
   };
 
-  const store = getStore();
   store.calibrationRequests = [request, ...store.calibrationRequests];
   persist(store);
   return request;
@@ -553,8 +602,11 @@ export function findAcceptanceRecord(id: string): AcceptanceRecord | undefined {
 }
 
 export function createAcceptanceRecord(payload: Partial<AcceptanceRecord>): AcceptanceRecord {
+  const store = getStore();
+  const acceptanceCode = payload.acceptanceCode || takeTicketCode(store, payload.deviceCode || payload.deviceId || "", "PTN");
   const record: AcceptanceRecord = {
     id: payload.id || makeId("acc"),
+    acceptanceCode,
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
@@ -570,7 +622,6 @@ export function createAcceptanceRecord(payload: Partial<AcceptanceRecord>): Acce
     createdAt: payload.createdAt || new Date().toISOString(),
     updatedAt: payload.updatedAt,
   };
-  const store = getStore();
   store.acceptanceRecords = [record, ...store.acceptanceRecords];
   persist(store);
   return record;
@@ -604,9 +655,11 @@ export function findTransferProposal(id: string): TransferProposal | undefined {
 }
 
 export function createTransferProposal(payload: Partial<TransferProposal>): TransferProposal {
+  const store = getStore();
+  const transferCode = payload.transferCode || takeTicketCode(store, payload.deviceCode || payload.deviceId || "", "PDC");
   const proposal: TransferProposal = {
     id: payload.id || makeId("tr"),
-    transferCode: payload.transferCode || `DC-${Date.now()}`,
+    transferCode,
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
@@ -620,7 +673,6 @@ export function createTransferProposal(payload: Partial<TransferProposal>): Tran
     createdAt: payload.createdAt || new Date().toISOString(),
     updatedAt: payload.updatedAt,
   };
-  const store = getStore();
   store.transferProposals = [proposal, ...store.transferProposals];
   persist(store);
   return proposal;
@@ -654,9 +706,11 @@ export function findLiquidationProposal(id: string): LiquidationProposal | undef
 }
 
 export function createLiquidationProposal(payload: Partial<LiquidationProposal>): LiquidationProposal {
+  const store = getStore();
+  const liquidationCode = payload.liquidationCode || takeTicketCode(store, payload.deviceCode || payload.deviceId || "", "PTL");
   const proposal: LiquidationProposal = {
     id: payload.id || makeId("tl"),
-    liquidationCode: payload.liquidationCode || `TL-${Date.now()}`,
+    liquidationCode,
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
@@ -670,7 +724,6 @@ export function createLiquidationProposal(payload: Partial<LiquidationProposal>)
     createdAt: payload.createdAt || new Date().toISOString(),
     updatedAt: payload.updatedAt,
   };
-  const store = getStore();
   store.liquidationProposals = [proposal, ...store.liquidationProposals];
   persist(store);
   return proposal;
@@ -704,10 +757,12 @@ export function findTrainingPlan(id: string): TrainingPlan | undefined {
 }
 
 export function createTrainingPlan(payload: Partial<TrainingPlan>): TrainingPlan {
+  const store = getStore();
   const now = new Date().toISOString();
+  const planCode = payload.planCode || takeTicketCode(store, payload.deviceCode || payload.deviceId || "", "PDT");
   const plan: TrainingPlan = {
     id: payload.id || makeId("train_plan"),
-    planCode: payload.planCode || payload.id || `PDT-${Date.now()}`,
+    planCode,
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
@@ -725,7 +780,6 @@ export function createTrainingPlan(payload: Partial<TrainingPlan>): TrainingPlan
     updatedAt: payload.updatedAt,
     createdBy: payload.createdBy || "system",
   };
-  const store = getStore();
   store.trainingPlans = [plan, ...store.trainingPlans];
   persist(store);
   return plan;

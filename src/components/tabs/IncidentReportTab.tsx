@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import {
   AlertTriangle,
   Plus,
-  Search,
   Download,
   Upload,
   Eye,
@@ -21,9 +20,6 @@ import {
   Clock,
   CheckCircle2,
   Circle,
-  Filter,
-  RefreshCw,
-  Building2,
   Users,
   Briefcase,
   Printer,
@@ -45,16 +41,18 @@ import {
   MOCK_USERS_LIST,
   AttachedFile,
 } from "@/lib/mockData";
+import { SmartTable, Column } from "@/components/SmartTable";
+import { previewTicketCode } from "@/lib/ticket-code";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Generate incident report code: PSC-năm-SNN
-function generateIncidentCode(year: number, counter: number): string {
-  return `PSC-${year}-${String(counter).padStart(3, "0")}`;
+// Generate incident report code: [device]-PSC-year-seq
+function generateIncidentCode(deviceCode: string, existingCodes: string[]): string {
+  return previewTicketCode(deviceCode || "NO-CODE", "PSC", existingCodes);
 }
 
-// Generate work order code: PSC-2024-001-WO-001
+// Generate work order code: [incident]-WO-XXX
 function generateWorkOrderCode(incidentCode: string, counter: number): string {
   return `${incidentCode}-WO-${String(counter).padStart(3, "0")}`;
 }
@@ -90,10 +88,6 @@ export default function IncidentReportTab() {
   const [activeTab, setActiveTab] = useState<"reports" | "work-orders">("reports");
   const [incidentCounter, setIncidentCounter] = useState(2);
   const [workOrderCounters, setWorkOrderCounters] = useState<Record<string, number>>({});
-
-  // Search and filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Form state
   const [form, setForm] = useState<Partial<IncidentReport>>({
@@ -169,23 +163,6 @@ export default function IncidentReportTab() {
     workOrders: patch.workOrders ?? base.workOrders,
   });
 
-  // Filtered incidents
-  const filteredIncidents = useMemo(() => {
-    return incidentReports.filter((incident) => {
-      const matchesSearch =
-        !searchTerm ||
-        incident.reportCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        incident.deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        incident.discoveredBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        incident.reportedBy?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus =
-        filterStatus === "all" || incident.status === filterStatus;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [incidentReports, searchTerm, filterStatus]);
-
   // All work orders from all incidents
   const allWorkOrders = useMemo(() => {
     const orders: (WorkOrder & { incidentReportCode: string })[] = [];
@@ -197,21 +174,228 @@ export default function IncidentReportTab() {
     return orders;
   }, [incidentReports]);
 
-  // Filtered work orders
-  const filteredWorkOrders = useMemo(() => {
-    return allWorkOrders.filter((wo) => {
-      const matchesSearch =
-        !searchTerm ||
-        wo.workOrderCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        wo.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        wo.incidentReportCode.toLowerCase().includes(searchTerm.toLowerCase());
+  type WorkOrderRow = WorkOrder & { incidentReportCode: string };
 
-      const matchesStatus =
-        filterStatus === "all" || wo.status === filterStatus;
+  const exportIncidents = (data: IncidentReport[]) => {
+    const headers = ["Mã phiếu", "Thiết bị", "Người báo cáo", "Thời gian phát hiện", "Thời gian kết thúc", "Trạng thái"];
+    const rows = data.map((incident) => [
+      incident.reportCode,
+      `${incident.deviceCode || ""} ${incident.deviceName || ""}`.trim(),
+      incident.reportedBy || incident.discoveredBy || "",
+      incident.incidentDateTime || "",
+      incident.completionDateTime || "—",
+      incident.status,
+    ]);
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [allWorkOrders, searchTerm, filterStatus]);
+    const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Bao_cao_su_co_${new Date().toISOString().split("T")[0]}.csv`);
+    link.click();
+    success("Thành công", "Đã xuất danh sách sự cố");
+  };
+
+  const exportWorkOrders = (data: WorkOrderRow[]) => {
+    const headers = ["Mã công việc", "Mã báo cáo", "Người thực hiện", "Thời gian bắt đầu", "Thời gian kết thúc", "Trạng thái"];
+    const rows = data.map((wo) => [
+      wo.workOrderCode,
+      wo.incidentReportCode,
+      wo.contactPerson,
+      wo.startDateTime,
+      wo.endDateTime || "—",
+      wo.status,
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Cong_viec_su_co_${new Date().toISOString().split("T")[0]}.csv`);
+    link.click();
+    success("Thành công", "Đã xuất danh sách công việc NCC");
+  };
+
+  const incidentColumns: Column<IncidentReport>[] = [
+    {
+      key: "reportCode",
+      label: "Mã phiếu",
+      minWidth: 160,
+      render: (incident) => (
+        <div className="space-y-1">
+          <div className="font-semibold text-red-600">{incident.reportCode}</div>
+          <div className="text-xs text-slate-500">{incident.deviceCode}</div>
+        </div>
+      ),
+    },
+    {
+      key: "deviceName",
+      label: "Thiết bị",
+      minWidth: 200,
+      render: (incident) => (
+        <div className="space-y-1">
+          <div className="font-medium text-slate-800">{incident.deviceName}</div>
+          <div className="text-xs text-slate-500">{incident.specialty}</div>
+        </div>
+      ),
+    },
+    {
+      key: "reportedBy",
+      label: "Người báo cáo",
+      minWidth: 180,
+      render: (incident) => (
+        <div className="space-y-1">
+          <div className="font-medium text-slate-800">{incident.reportedBy || incident.discoveredBy}</div>
+          <div className="text-xs text-slate-500">{incident.discoveredByRole}</div>
+        </div>
+      ),
+    },
+    { key: "incidentDateTime", label: "Thời gian phát hiện", minWidth: 160 },
+    { key: "completionDateTime", label: "Thời gian kết thúc", minWidth: 160 },
+    {
+      key: "status",
+      label: "Trạng thái",
+      minWidth: 140,
+      render: (incident) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(incident.status)}`}>
+          {incident.status}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      sortable: false,
+      filterable: false,
+      minWidth: 220,
+      render: (incident) => (
+        <div className="flex items-center gap-1">
+          {(incident.status === "Đang khắc phục" || incident.status === "Nháp") && (
+            <button
+              onClick={() => handleOpenSupplierContact(incident)}
+              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+              title="Liên hệ nhà cung cấp"
+            >
+              <Contact size={16} />
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setSelectedIncident(incident);
+              setShowSupplierContact(true);
+            }}
+            className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+            title="Xem/Cập nhật công việc NCC"
+          >
+            <Briefcase size={16} />
+          </button>
+          <button
+            onClick={() => {
+              setSelectedIncident(incident);
+              setShowEditForm(true);
+            }}
+            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded"
+            title="Chỉnh sửa"
+          >
+            <Edit size={16} />
+          </button>
+          <button className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Xem chi tiết">
+            <Eye size={16} />
+          </button>
+          <button
+            onClick={() => {
+              const files = incident.workOrders?.flatMap((wo) => wo.attachments || []) || [];
+              openAttachmentViewer(`Đính kèm của ${incident.reportCode}`, files);
+            }}
+            className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
+            title="Đính kèm"
+          >
+            <Paperclip size={16} />
+          </button>
+          <button className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Xuất PDF">
+            <Printer size={16} />
+          </button>
+          {incident.status === "Nháp" && incident.conclusion === "đã khắc phục" && (
+            <button
+              onClick={() => handleFinalSubmit(incident)}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+              title="Gửi báo cáo sự cố"
+            >
+              <Send size={16} />
+            </button>
+          )}
+          {incident.status === "Chờ duyệt" && (
+            <button
+              onClick={() => handleApprove(incident)}
+              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
+              title="Phê duyệt"
+            >
+              <CheckCircle2 size={16} />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const workOrderColumns: Column<WorkOrderRow>[] = [
+    {
+      key: "workOrderCode",
+      label: "Mã công việc",
+      minWidth: 160,
+      render: (wo) => <span className="font-semibold text-blue-600">{wo.workOrderCode}</span>,
+    },
+    { key: "incidentReportCode", label: "Mã báo cáo", minWidth: 140 },
+    {
+      key: "contactPerson",
+      label: "Người thực hiện",
+      minWidth: 160,
+      render: (wo) => (
+        <div className="space-y-1">
+          <div className="font-medium text-slate-800">{wo.contactPerson}</div>
+          <div className="text-xs text-slate-500">{wo.contactMethod}</div>
+        </div>
+      ),
+    },
+    { key: "startDateTime", label: "Thời gian bắt đầu", minWidth: 160 },
+    { key: "endDateTime", label: "Thời gian kết thúc", minWidth: 160 },
+    {
+      key: "status",
+      label: "Trạng thái",
+      minWidth: 140,
+      render: (wo) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWorkOrderStatusColor(wo.status)}`}>
+          {wo.status}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      sortable: false,
+      filterable: false,
+      minWidth: 180,
+      render: (wo) => (
+        <div className="flex items-center gap-1">
+          <button className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Xem chi tiết">
+            <Eye size={16} />
+          </button>
+          <button className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Xuất PDF">
+            <Printer size={16} />
+          </button>
+          <button
+            onClick={() => openAttachmentViewer(`Đính kèm của ${wo.workOrderCode}`, wo.attachments || [])}
+            className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
+            title="Đính kèm"
+          >
+            <Paperclip size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   // Handle device selection
   const handleDeviceSelect = (deviceId: string) => {
@@ -249,11 +433,11 @@ export default function IncidentReportTab() {
       return;
     }
 
-    const currentYear = new Date().getFullYear();
+    const currentCodes = incidentReports.map((r) => r.reportCode);
     const newCounter = incidentCounter + 1;
     const newIncident: IncidentReport = {
       id: `i${Date.now()}`,
-      reportCode: generateIncidentCode(currentYear, newCounter),
+      reportCode: generateIncidentCode(form.deviceCode || form.deviceId || "", currentCodes),
       deviceId: form.deviceId || "",
       deviceName: form.deviceName || "",
       deviceCode: form.deviceCode || "",
@@ -330,11 +514,11 @@ export default function IncidentReportTab() {
       return;
     }
 
-    const currentYear = new Date().getFullYear();
+    const currentCodes = incidentReports.map((r) => r.reportCode);
     const newCounter = incidentCounter + 1;
     const newIncident: IncidentReport = {
       id: `i${Date.now()}`,
-      reportCode: generateIncidentCode(currentYear, newCounter),
+      reportCode: generateIncidentCode(form.deviceCode || form.deviceId || "", currentCodes),
       deviceId: form.deviceId || "",
       deviceName: form.deviceName || "",
       deviceCode: form.deviceCode || "",
@@ -670,28 +854,6 @@ export default function IncidentReportTab() {
     }
   };
 
-  // Export to Excel
-  const exportToExcel = () => {
-    const data = activeTab === "reports" ? filteredIncidents : filteredWorkOrders;
-    const headers = activeTab === "reports"
-      ? ["Mã phiếu", "Thiết bị", "Người báo cáo", "Thời gian phát hiện", "Thời gian kết thúc", "Trạng thái"]
-      : ["Mã công việc", "Mã báo cáo", "Người thực hiện", "Thời gian bắt đầu", "Thời gian kết thúc", "Trạng thái"];
-
-    const rows = activeTab === "reports"
-      ? data.map((i: any) => [i.reportCode, i.deviceName, i.reportedBy || i.discoveredBy, i.incidentDateTime, i.completionDateTime || "—", i.status])
-      : data.map((wo: any) => [wo.workOrderCode, wo.incidentReportCode, wo.contactPerson, wo.startDateTime, wo.endDateTime || "—", wo.status]);
-
-    const csvContent = [headers.join(","), ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(","))].join("\n");
-
-    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Bao_cao_su_co_${new Date().toISOString().split("T")[0]}.csv`);
-    link.click();
-    success("Thành công", "Đã xuất file Excel");
-  };
-
   // Open edit form
   const handleEditIncident = (incident: IncidentReport) => {
     setForm(incident);
@@ -818,7 +980,7 @@ export default function IncidentReportTab() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-8 max-w-[1800px] mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -865,203 +1027,35 @@ export default function IncidentReportTab() {
         </button>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm kiếm..."
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm"
-          />
-        </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 border border-slate-200 rounded-lg text-sm"
-        >
-          <option value="all">Tất cả trạng thái</option>
-          <option value="Nháp">Nháp</option>
-          <option value="Đang khắc phục">Đang khắc phục</option>
-          <option value="Chờ duyệt">Chờ duyệt</option>
-          <option value="Hoàn thành">Hoàn thành</option>
-          <option value="Từ chối">Từ chối</option>
-        </select>
-        <button
-          onClick={exportToExcel}
-          className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center gap-2"
-        >
-          <Download size={18} />
-          Xuất Excel
-        </button>
+      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+        {activeTab === "reports" && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 min-h-[720px]">
+            <SmartTable
+              data={incidentReports}
+              columns={incidentColumns}
+              keyField="id"
+              pageSizeOptions={[5, 10, 15, 20]}
+              defaultPageSize={10}
+              settingsKey="incident-reports"
+              onExport={exportIncidents}
+            />
+          </div>
+        )}
+
+        {activeTab === "work-orders" && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 min-h-[720px]">
+            <SmartTable
+              data={allWorkOrders}
+              columns={workOrderColumns}
+              keyField="id"
+              pageSizeOptions={[5, 10, 15, 20]}
+              defaultPageSize={10}
+              settingsKey="incident-work-orders"
+              onExport={exportWorkOrders}
+            />
+          </div>
+        )}
       </div>
-
-      {/* Reports Table */}
-      {activeTab === "reports" && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Mã phiếu</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Người báo cáo</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Thời gian phát hiện</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Thời gian kết thúc</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Trạng thái</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredIncidents.map((incident) => (
-                <tr key={incident.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-red-600">{incident.reportCode}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="font-medium text-slate-800">{incident.reportedBy || incident.discoveredBy}</div>
-                    <div className="text-xs text-slate-500">{incident.deviceName}</div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{incident.incidentDateTime}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{incident.completionDateTime || "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(incident.status)}`}>
-                      {incident.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      {/* Contact Supplier Button - Show for Đang khắc phục status */}
-                      {(incident.status === "Đang khắc phục" || incident.status === "Nháp") && (
-                        <button
-                          onClick={() => handleOpenSupplierContact(incident)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Liên hệ nhà cung cấp"
-                        >
-                          <Contact size={16} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setSelectedIncident(incident);
-                          setShowSupplierContact(true);
-                        }}
-                        className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
-                        title="Xem/Cập nhật công việc NCC"
-                      >
-                        <Briefcase size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedIncident(incident);
-                          setShowEditForm(true);
-                        }}
-                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded"
-                        title="Chỉnh sửa"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
-                        title="Xem chi tiết"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const files = incident.workOrders?.flatMap((wo) => wo.attachments || []) || [];
-                          openAttachmentViewer(`Đính kèm của ${incident.reportCode}`, files);
-                        }}
-                        className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
-                        title="Đính kèm"
-                      >
-                        <Paperclip size={16} />
-                      </button>
-                      <button className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Xuất PDF">
-                        <Printer size={16} />
-                      </button>
-                      {incident.status === "Nháp" && incident.conclusion === "đã khắc phục" && (
-                        <button
-                          onClick={() => handleFinalSubmit(incident)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                          title="Gửi báo cáo sự cố"
-                        >
-                          <Send size={16} />
-                        </button>
-                      )}
-                      {incident.status === "Chờ duyệt" && (
-                        <button
-                          onClick={() => handleApprove(incident)}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
-                          title="Phê duyệt"
-                        >
-                          <CheckCircle2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredIncidents.length === 0 && (
-            <div className="text-center py-12 text-slate-500">Không có dữ liệu</div>
-          )}
-        </div>
-      )}
-
-      {/* Work Orders Table */}
-      {activeTab === "work-orders" && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Mã công việc</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Mã báo cáo</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Người thực hiện</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Thời gian bắt đầu</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Thời gian kết thúc</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Trạng thái</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredWorkOrders.map((wo: any) => (
-                <tr key={wo.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-blue-600">{wo.workOrderCode}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{wo.incidentReportCode}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{wo.contactPerson}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{wo.startDateTime}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{wo.endDateTime || "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWorkOrderStatusColor(wo.status)}`}>
-                      {wo.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Xem chi tiết">
-                        <Eye size={16} />
-                      </button>
-                      <button className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Xuất PDF">
-                        <Printer size={16} />
-                      </button>
-                      <button
-                        onClick={() => openAttachmentViewer(`Đính kèm của ${wo.workOrderCode}`, wo.attachments || [])}
-                        className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
-                        title="Đính kèm"
-                      >
-                        <Paperclip size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredWorkOrders.length === 0 && (
-            <div className="text-center py-12 text-slate-500">Không có dữ liệu</div>
-          )}
-        </div>
-      )}
 
       {/* Create Incident Form Modal */}
       {showForm && (
@@ -1354,11 +1348,11 @@ export default function IncidentReportTab() {
                           return;
                         }
                         
-                        const currentYear = new Date().getFullYear();
+                        const currentCodes = incidentReports.map((r) => r.reportCode);
                         const newCounter = incidentCounter + 1;
                         const newIncident: IncidentReport = {
                           id: `i${Date.now()}`,
-                          reportCode: generateIncidentCode(currentYear, newCounter),
+                          reportCode: generateIncidentCode(form.deviceCode || form.deviceId || "", currentCodes),
                           deviceId: form.deviceId || "",
                           deviceName: form.deviceName || "",
                           deviceCode: form.deviceCode || "",
@@ -1417,11 +1411,11 @@ export default function IncidentReportTab() {
                           return;
                         }
 
-                        const currentYear = new Date().getFullYear();
+                        const currentCodes = incidentReports.map((r) => r.reportCode);
                         const newCounter = incidentCounter + 1;
                         const newIncident: IncidentReport = {
                           id: `i${Date.now()}`,
-                          reportCode: generateIncidentCode(currentYear, newCounter),
+                          reportCode: generateIncidentCode(form.deviceCode || form.deviceId || "", currentCodes),
                           deviceId: form.deviceId || "",
                           deviceName: form.deviceName || "",
                           deviceCode: form.deviceCode || "",

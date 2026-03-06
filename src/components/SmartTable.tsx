@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Search,
-  Download,
+  FileSpreadsheet,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -392,7 +392,7 @@ export function SmartTable<T>({
             onClick={handleExport}
             className="px-3 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center gap-2"
           >
-            <Download size={16} />
+            <FileSpreadsheet size={16} />
             <span className="text-sm">Xuất Excel</span>
           </button>
         </div>

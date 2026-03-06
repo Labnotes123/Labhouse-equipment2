@@ -484,7 +484,7 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-[90vw] xl:max-w-7xl w-full max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl max-w-[98vw] xl:max-w-[1600px] w-full min-h-[90vh] max-h-[98vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-xl font-bold text-slate-800">Hiệu chuẩn thiết bị</h2>
@@ -884,41 +884,14 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
                   <p className="text-sm text-slate-400 mt-1">Lịch hiệu chuẩn sẽ hiển thị sau khi yêu cầu được phê duyệt</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">STT</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Tên thiết bị</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã thiết bị</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Ngày HC</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Nội dung</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Trạng thái</th>
-                        <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {calibrationSchedules
-                        .filter((s) => s.deviceId === device.id)
-                        .map((s, idx) => (
-                          <tr key={s.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3">{idx + 1}</td>
-                            <td className="px-4 py-3">{s.deviceName}</td>
-                            <td className="px-4 py-3 font-mono">{s.deviceCode}</td>
-                            <td className="px-4 py-3">{s.scheduledDate}</td>
-                            <td className="px-4 py-3">{s.content}</td>
-                            <td className="px-4 py-3">
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{s.status}</span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded">
-                                <Eye size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+                <div className="mt-4">
+                  <SmartTable
+                    data={calibrationSchedules.filter((s) => s.deviceId === device.id)}
+                    columns={scheduleColumns}
+                    keyField="id"
+                    settingsKey={`device_${device.id}_cal_schedules`}
+                    defaultPageSize={10}
+                  />
                 </div>
               )}
             </div>
@@ -947,45 +920,14 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
                   <p className="text-sm text-slate-400 mt-1">Kết quả hiệu chuẩn sẽ hiển thị sau khi thực hiện hiệu chuẩn</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">STT</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Tên thiết bị</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã thiết bị</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Ngày thực hiện</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Kết luận</th>
-                        <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {calibrationResults
-                        .filter((r) => r.deviceId === device.id)
-                        .map((r, idx) => (
-                          <tr key={r.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3">{idx + 1}</td>
-                            <td className="px-4 py-3">{r.deviceName}</td>
-                            <td className="px-4 py-3 font-mono">{r.deviceCode}</td>
-                            <td className="px-4 py-3">{r.executionDate}</td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  r.conclusion === "Đạt" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {r.conclusion}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded">
-                                <Eye size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+                <div className="mt-4">
+                  <SmartTable
+                    data={calibrationResults.filter((r) => r.deviceId === device.id)}
+                    columns={resultColumns}
+                    keyField="id"
+                    settingsKey={`device_${device.id}_cal_results`}
+                    defaultPageSize={10}
+                  />
                 </div>
               )}
             </div>

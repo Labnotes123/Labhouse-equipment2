@@ -326,9 +326,9 @@ export function SmartTable<T>({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 w-full">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -399,9 +399,9 @@ export function SmartTable<T>({
       </div>
 
       {/* Table */}
-      <div ref={tableRef} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      <div ref={tableRef} className="bg-white rounded-xl border border-slate-200 overflow-hidden w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="min-w-full">
             <thead className="bg-slate-50">
               <tr>
                 {visibleColumns.map((col) => (

@@ -950,12 +950,10 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                             deviceId: device.id,
                             deviceName: device.name,
                             deviceCode: device.code,
-                            type: scheduleForm.content || "Hiệu chuẩn định kỳ",
+                            content: scheduleForm.content || "Hiệu chuẩn định kỳ",
                             scheduledDate: scheduleForm.scheduledDate,
-                            assignedTo: "KTV Lab",
-                            status: "Đang chờ",
-                            notes: "",
-                            executionDate: ""
+                            status: "Chờ thực hiện",
+                            notes: ""
                           }]);
                           setShowScheduleForm(false); success("Đã lên lịch hiệu chuẩn thành công");
                           setScheduleForm({scheduledDate: "", scheduledTime: "", reminderDays: 3, content: "", relatedUsers: []});
@@ -1100,7 +1098,7 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                             manufacturer: device.manufacturer,
                             executionDate: resultForm.executionDate || "2026-03-06",
                             content: resultForm.content || "Hiệu chuẩn",
-                            executionUnit: resultForm.unit || "Trung tâm",
+                            unit: resultForm.unit || "Trung tâm",
                             result: resultForm.result || "Tốt",
                             standard: resultForm.standard || "ISO",
                             conclusion: resultForm.conclusion || "Đạt",
@@ -1115,7 +1113,7 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                           }
                           
                           setResultForm({
-                            id: "", resultCode: "", deviceId: "", deviceName: "", deviceCode: "", serialNumber: "", manufacturer: "", executionDate: "", content: "", unit: "", result: "", standard: "", conclusion: "", executionUnit: ""
+                            id: "", resultCode: "", deviceId: "", deviceName: "", deviceCode: "", serialNumber: "", manufacturer: "", executionDate: "", content: "", unit: "", result: "", standard: "", conclusion: ""
                           });
 
                         }} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 flex items-center gap-2">

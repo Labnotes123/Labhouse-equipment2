@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Calendar,
   CheckCircle2,
@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Device, MOCK_USERS_LIST, AttachedFile } from "@/lib/mockData";
 import { SmartTable, Column } from "@/components/SmartTable";
+import { previewTicketCode } from "@/lib/ticket-code";
 
 interface CalibrationModalProps {
   show: boolean;
@@ -97,8 +98,17 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
     requestedBy: "",
     attachments: [],
   });
-  const [calibrationCounter, setCalibrationCounter] = useState(1);
   const [calibrationRequests, setCalibrationRequests] = useState<CalibrationRequest[]>([]);
+
+  const deviceRequests = useMemo(
+    () => (device ? calibrationRequests.filter((request) => request.deviceId === device.id) : []),
+    [calibrationRequests, device]
+  );
+
+  const nextRequestCode = useMemo(
+    () => previewTicketCode(device?.code || device?.id || "NO-CODE", "PHC", deviceRequests.map((request) => request.requestCode)),
+    [device?.code, device?.id, deviceRequests]
+  );
 
   // Search states
   const [approverSearch, setApproverSearch] = useState("");
@@ -187,8 +197,6 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
 
     fetchCalibrationData();
 
-    const baseRequestCode = `PHC-${new Date().getFullYear()}-${String(calibrationCounter).padStart(3, "0")}`;
-
     setCalibrationModalTab("request");
     setCalibrationRequestViewMode("list");
     setShowScheduleForm(false); success("Đã lên lịch hiệu chuẩn thành công");
@@ -196,7 +204,7 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
     setCalibrationForm((prev) => ({
       ...prev,
       id: `req-${Date.now()}`,
-      requestCode: baseRequestCode,
+      requestCode: nextRequestCode,
       deviceId: device.id,
       deviceName: device.name,
       deviceCode: device.code,
@@ -233,7 +241,7 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
     setRelatedUserSearch("");
     setShowApproverDropdown(false);
     setShowRelatedUserDropdown(false);
-  }, [device, show, calibrationCounter, user?.fullName]);
+  }, [device, show, nextRequestCode, user?.fullName]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Close dropdowns when clicking outside
@@ -378,8 +386,6 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
 
   if (!show || !device) return null;
 
-  const requestCode = `PHC-${new Date().getFullYear()}-${String(calibrationCounter).padStart(3, "0")}`;
-
   const handleSubmitRequest = (status: CalibrationRequestStatus) => {
     if (!calibrationForm.expectedDate || !calibrationForm.approver) {
       error("Lỗi", "Vui lòng chọn ngày dự kiến và người phê duyệt");
@@ -389,15 +395,14 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
     const request: CalibrationRequest = {
       ...calibrationForm,
       id: `req-${Date.now()}`,
-      requestCode,
+      requestCode: nextRequestCode,
       status,
       requestedBy: calibrationForm.requestedBy || user?.fullName || "",
     };
 
     setCalibrationRequests((prev) => [...prev, request]);
-    setCalibrationCounter((prev) => prev + 1);
     setCalibrationRequestViewMode("list");
-    success("Thành công", status === "Chờ duyệt" ? `Đã gửi yêu cầu hiệu chuẩn ${requestCode}` : "Đã lưu bản nháp yêu cầu hiệu chuẩn");
+    success("Thành công", status === "Chờ duyệt" ? `Đã gửi yêu cầu hiệu chuẩn ${nextRequestCode}` : "Đã lưu bản nháp yêu cầu hiệu chuẩn");
   };
 
   const handleAddRelatedUser = (userName: string) => {

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { User } from "@/contexts/AuthContext";
+import { previewTicketCode } from "@/lib/ticket-code";
 import {
   AttachedFile,
   Device,
@@ -58,7 +59,6 @@ const contactMethods = [
   { value: "trao đổi trực tiếp", label: "Trao đổi trực tiếp", icon: Users },
 ];
 
-const generateIncidentCode = (year: number, counter: number) => `PSC-${year}-${String(counter).padStart(3, "0")}`;
 const generateWorkOrderCode = (incidentCode: string, counter: number) => `${incidentCode}-WO-${String(counter).padStart(3, "0")}`;
 
 function createDefaultIncidentForm(device: Device, user: User | null): Partial<IncidentReport> {
@@ -129,7 +129,6 @@ export default function IncidentReportModal({
   const workOrderAttachmentInputRef = useRef<HTMLInputElement>(null);
 
   const [incidentReports, setIncidentReports] = useState<IncidentReport[]>(mockIncidents);
-  const [incidentCounter, setIncidentCounter] = useState(() => mockIncidents.length + 1);
   const [workOrderCounter, setWorkOrderCounter] = useState(1);
   const [incidentModalTab, setIncidentModalTab] = useState<IncidentModalTab>("reports");
   const [incidentViewMode, setIncidentViewMode] = useState<IncidentViewMode>("list");
@@ -189,6 +188,11 @@ export default function IncidentReportModal({
       return (incident.workOrders || []).map((wo) => ({ ...wo, incidentReportCode: incident.reportCode }));
     });
   }, [deviceIncidents]);
+
+  const nextIncidentCode = useMemo(
+    () => previewTicketCode(device.code || device.id, "PSC", deviceIncidents.map((incident) => incident.reportCode)),
+    [device.code, device.id, deviceIncidents]
+  );
 
   const resetIncidentForm = () => {
     setIncidentForm(createDefaultIncidentForm(device, user));
@@ -258,13 +262,9 @@ export default function IncidentReportModal({
       }
     }
 
-    const nowYear = new Date().getFullYear();
     const baseIncident: IncidentReport = {
       id: editingIncidentId || `ir-${Date.now()}`,
-      reportCode:
-        editingIncidentId && incidentForm.reportCode
-          ? incidentForm.reportCode
-          : generateIncidentCode(nowYear, incidentCounter),
+      reportCode: editingIncidentId && incidentForm.reportCode ? incidentForm.reportCode : nextIncidentCode,
       deviceId: device.id,
       deviceName: device.name,
       deviceCode: device.code,
@@ -304,7 +304,6 @@ export default function IncidentReportModal({
       if (exists) {
         return prev.map((incident) => (incident.id === baseIncident.id ? baseIncident : incident));
       }
-      setIncidentCounter((count) => count + 1);
       return [baseIncident, ...prev];
     });
 

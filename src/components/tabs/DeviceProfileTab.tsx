@@ -113,6 +113,7 @@ import {
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { previewTicketCode } from "@/lib/ticket-code";
 
 type ViewMode = "grid" | "list";
 
@@ -613,6 +614,13 @@ export default function DeviceProfileTab() {
   const [selectedReturnAcceptanceDeviceId, setSelectedReturnAcceptanceDeviceId] = useState<string | null>(null);
   const [newAcceptanceRecords, setNewAcceptanceRecords] = useState<Record<string, NewAcceptanceRecord>>({});
   const [returnAcceptanceRecords, setReturnAcceptanceRecords] = useState<Record<string, ReturnAcceptanceRecord>>({});
+  const existingReturnAcceptanceCodes = useMemo(
+    () =>
+      Object.values(returnAcceptanceRecords)
+        .map((record) => record.acceptanceForm?.formCode)
+        .filter((code): code is string => !!code),
+    [returnAcceptanceRecords]
+  );
   const [surveyUserSearch, setSurveyUserSearch] = useState("");
   const [returnTransportFilterFrom, setReturnTransportFilterFrom] = useState("");
   const [returnTransportFilterTo, setReturnTransportFilterTo] = useState("");
@@ -997,15 +1005,13 @@ export default function DeviceProfileTab() {
     installationSurveyForm: createDefaultSurveyForm(),
   });
 
-  const createReturnFormCode = () => {
-    const year = new Date().getFullYear();
-    const sequence = Object.values(returnAcceptanceRecords).filter((record) => record.acceptanceForm?.formCode?.startsWith(`PTN-${year}-`)).length + 1;
-    return `PTN-${year}-${String(sequence).padStart(3, "0")}`;
+  const createReturnFormCode = (device: Device) => {
+    return previewTicketCode(device.code || device.id, "PTN", existingReturnAcceptanceCodes);
   };
 
   const createDefaultReturnAcceptanceForm = (device: Device): ReturnAcceptanceFormState => ({
     formName: `Phiếu tiếp nhận thiết bị ${device.code}`,
-    formCode: createReturnFormCode(),
+    formCode: createReturnFormCode(device),
     receiveCondition: "",
     note: "",
     handoverBy: "",

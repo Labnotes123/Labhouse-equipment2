@@ -14,6 +14,7 @@ import type { Device } from "@/lib/mockData";
 import type { User } from "@/contexts/AuthContext";
 import type { TransferProposal, WorkflowStatus } from "./DeviceProfileTab";
 import { SmartTable, Column } from "@/components/SmartTable";
+import { previewTicketCode } from "@/lib/ticket-code";
 
 interface TransferModalProps {
   show: boolean;
@@ -64,6 +65,13 @@ export default function TransferModal({
   if (!show) return null;
 
   const deviceTransfers = transferRecords.filter((record) => record.deviceId === device.id);
+
+  const fallbackTransferCode = `PDC-${new Date().getFullYear()}-${String(transferCounter).padStart(3, "0")}`;
+  const nextTransferCode = previewTicketCode(
+    device.code || device.id,
+    "PDC",
+    deviceTransfers.map((record) => record.transferCode)
+  ) || fallbackTransferCode;
 
   const proposalColumns: Column<TransferProposal>[] = [
     { key: "transferCode", label: "Mã phiếu", sortable: true, filterable: true },
@@ -233,9 +241,8 @@ export default function TransferModal({
                       <button
                         onClick={() => {
                           onEditingChange(null);
-                          const year = new Date().getFullYear();
                           onFormChange({
-                            transferCode: `PDC-${year}-${String(transferCounter).padStart(3, "0")}`,
+                            transferCode: nextTransferCode,
                             fromLocation: device.location,
                             toLocation: "",
                             reason: "",
@@ -284,7 +291,7 @@ export default function TransferModal({
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-slate-800">Phiếu đề xuất điều chuyển</h3>
                       <span className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-mono rounded-md shadow-sm">
-                        {transferForm.transferCode || `PDC-${new Date().getFullYear()}-${String(transferCounter).padStart(3, "0")}`}
+                        {transferForm.transferCode || nextTransferCode}
                       </span>
                     </div>
 

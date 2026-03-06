@@ -36,6 +36,7 @@ import { SmartTable, Column } from "@/components/SmartTable";
 import { useToast } from "@/contexts/ToastContext";
 import type { User } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
+import { previewTicketCode } from "@/lib/ticket-code";
 
 interface TrainingModalProps {
   show: boolean;
@@ -446,6 +447,13 @@ export default function TrainingModal({
   const deviceDocs = trainingDocuments.filter((d) => d.deviceId === device.id);
   const deviceResults = trainingResults.filter((r) => r.deviceId === device.id);
 
+  const fallbackPlanCode = `PDT-${new Date().getFullYear()}-${String(planCounter).padStart(3, "0")}`;
+  const nextPlanCode = useMemo(
+    () => previewTicketCode(device.code || device.id, "PDT", devicePlans.map((plan) => plan.planCode)),
+    [device.code, device.id, devicePlans]
+  );
+  const resolvedPlanCode = nextPlanCode || fallbackPlanCode;
+
   const filteredPlans = planFilter === "all" ? devicePlans : devicePlans.filter((p) => p.status === planFilter);
   const filteredDocs = docFilter === "all" ? deviceDocs : deviceDocs.filter((d) => d.documentType === docFilter);
 
@@ -494,10 +502,9 @@ export default function TrainingModal({
     }
 
     const now = new Date().toISOString();
-    const year = new Date().getFullYear();
     const newPlanCode = editingPlanId
-      ? devicePlans.find((p) => p.id === editingPlanId)?.planCode || `PDT-${year}-${String(planCounter).padStart(3, "0")}`
-      : `PDT-${year}-${String(planCounter).padStart(3, "0")}`;
+      ? devicePlans.find((p) => p.id === editingPlanId)?.planCode || resolvedPlanCode
+      : resolvedPlanCode;
 
     const planData: TrainingPlan = {
       id: editingPlanId || `tp-${Date.now()}`,
@@ -1388,7 +1395,7 @@ export default function TrainingModal({
                           readOnly
                           value={editingPlanId
                             ? devicePlans.find((p) => p.id === editingPlanId)?.planCode || ""
-                            : `PDT-${new Date().getFullYear()}-${String(planCounter).padStart(3, "0")}`}
+                            : resolvedPlanCode}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm font-mono"
                         />
                       </div>

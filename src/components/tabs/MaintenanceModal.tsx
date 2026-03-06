@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { previewTicketCode } from "@/lib/ticket-code";
 import { SmartTable, Column } from "@/components/SmartTable";
 import { Device, MOCK_USERS_LIST } from "@/lib/mockData";
 
@@ -88,7 +89,6 @@ const getAttachmentType = (filename: string): Attachment["type"] => {
   return "doc";
 };
 
-const generateRequestCode = (year: number, counter: number) => `PBD-${year}-${String(counter).padStart(3, "0")}`;
 const generateScheduleCode = (year: number, counter: number) => `LBD-${year}-${String(counter).padStart(3, "0")}`;
 const generateResultCode = (year: number, counter: number) => `KQBD-${year}-${String(counter).padStart(3, "0")}`;
 
@@ -183,7 +183,11 @@ export default function MaintenanceModal({ show, device, onClose }: MaintenanceM
 
   if (!show || !device || !requestForm) return null;
 
-  const currentRequestCode = generateRequestCode(new Date().getFullYear(), requestCounter);
+  const currentRequestCode = previewTicketCode(
+    device?.code || device?.id || "NO-CODE",
+    "PBD",
+    deviceRequests.map((r) => r.requestCode)
+  );
 
   const approvers = MOCK_USERS_LIST.filter((u) => ["Quản lý trang thiết bị", "Trưởng phòng xét nghiệm", "Admin", "Giám đốc"].includes(u.role));
 

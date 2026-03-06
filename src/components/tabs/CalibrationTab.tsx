@@ -30,11 +30,7 @@ import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { SmartTable, Column } from "@/components/SmartTable";
-
-// Generate calibration request code
-function generateCalibrationCode(year: number, counter: number): string {
-  return `PHC-${year}-${String(counter).padStart(3, "0")}`;
-}
+import { previewTicketCode } from "@/lib/ticket-code";
 
 type CalibrationTab = "request" | "schedule" | "result";
 
@@ -287,11 +283,12 @@ export default function CalibrationTab() {
       return;
     }
 
-    const currentYear = new Date().getFullYear();
+    const existingCodes = calibrationRequests.map((r) => r.requestCode).filter(Boolean);
+    const requestCode = previewTicketCode(form.deviceCode || form.deviceId || "", "PHC", existingCodes);
     const newCounter = calibrationCounter + 1;
     const newRequest = {
       id: `req-${Date.now()}`,
-      requestCode: generateCalibrationCode(currentYear, calibrationCounter),
+      requestCode,
       ...form,
       createdAt: new Date().toISOString(),
     };

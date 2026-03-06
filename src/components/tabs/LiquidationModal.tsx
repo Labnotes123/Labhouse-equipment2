@@ -19,6 +19,7 @@ import type { User } from "@/contexts/AuthContext";
 import type { LiquidationProposal, WorkflowStatus } from "./DeviceProfileTab";
 import { SmartTable, Column } from "@/components/SmartTable";
 import { useToast } from "@/contexts/ToastContext";
+import { previewTicketCode } from "@/lib/ticket-code";
 
 interface LiquidationModalProps {
   show: boolean;
@@ -72,6 +73,13 @@ export default function LiquidationModal({
 
   const deviceLiquidations = liquidationRecords.filter((record) => record.deviceId === device.id);
   const hasApprovedProposal = deviceLiquidations.some(r => r.status === "Đã duyệt" || r.status === "Hoàn thành");
+
+  const fallbackLiquidationCode = `PTL-${new Date().getFullYear()}-${String(liquidationCounter).padStart(3, "0")}`;
+  const nextLiquidationCode = previewTicketCode(
+    device.code || device.id,
+    "PTL",
+    deviceLiquidations.map((record) => record.liquidationCode)
+  ) || fallbackLiquidationCode;
 
   const proposalColumns: Column<LiquidationProposal>[] = [
     { key: "liquidationCode", label: "Mã phiếu", filterable: true, sortable: true },
@@ -191,9 +199,8 @@ export default function LiquidationModal({
                   <button
                     onClick={() => {
                       onEditingChange(null);
-                      const year = new Date().getFullYear();
                       onFormChange({
-                        liquidationCode: `PTL-${year}-${String(liquidationCounter).padStart(3, '0')}`,
+                        liquidationCode: nextLiquidationCode,
                         reason: "",
                         method: "Bán phế liệu",
                         estimatedValue: "",
@@ -226,7 +233,7 @@ export default function LiquidationModal({
                     {editingId ? "Cập nhật Phiếu thanh lý" : "Khởi tạo Phiếu đề xuất thanh lý"}
                   </h3>
                   <span className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-mono rounded-md shadow-sm">
-                    {liquidationForm.liquidationCode}
+                    {liquidationForm.liquidationCode || nextLiquidationCode}
                   </span>
                 </div>
                 

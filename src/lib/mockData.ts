@@ -156,6 +156,7 @@ export interface UserProfile {
   department: string;
   branch: string;
   signature?: string;
+  autoAttachSignature?: boolean;
   managedDevices: string[];
   profileIds: string[];
   isActive: boolean;

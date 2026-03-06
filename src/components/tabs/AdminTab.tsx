@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Settings,
   Users,
@@ -36,6 +36,10 @@ import {
   Upload,
   RotateCcw,
   MapPin,
+  Pen,
+  Image,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -121,6 +125,9 @@ export default function AdminTab() {
   const [showColumnConfig, setShowColumnConfig] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [signatureMode, setSignatureMode] = useState<"upload" | "draw">("upload");
+  const [isDrawing, setIsDrawing] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Initialize backup data from localStorage
   useEffect(() => {
@@ -1233,7 +1240,7 @@ export default function AdminTab() {
         </button>
 
         <button
-          onClick={() => { setEditingUser({ id: "", username: "", password: "", fullName: "", employeeId: "", phone: "", email: "", position: "", department: "", branch: "", signature: "", managedDevices: [], profileIds: [], isActive: true, createdAt: "" }); setShowUserModal(true); }}
+          onClick={() => { setEditingUser({ id: "", username: "", password: "", fullName: "", employeeId: "", phone: "", email: "", position: "", department: "", branch: "", signature: "", autoAttachSignature: false, managedDevices: [], profileIds: [], isActive: true, createdAt: "" }); setShowUserModal(true); }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all"
           style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}
         >
@@ -1422,7 +1429,7 @@ export default function AdminTab() {
       {/* User Modal */}
       {showUserModal && editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl transform transition-all">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl transform transition-all">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-violet-600 to-indigo-600">
               <div className="flex items-center justify-between">
@@ -1581,6 +1588,223 @@ export default function AdminTab() {
                 </select>
                 <p className="text-xs text-slate-400 mt-1">Giữ Ctrl/Cmd để chọn nhiều</p>
               </div>
+              {/* Digital Signature Section */}
+              <div className="border border-slate-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Pen size={16} className="text-violet-500" />
+                    Thiết lập Chữ ký điện tử
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Tự động đính kèm chữ ký</span>
+                    <button
+                      type="button"
+                      disabled={!editingUser.signature}
+                      onClick={() => setEditingUser({ ...editingUser, autoAttachSignature: !editingUser.autoAttachSignature })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        editingUser.autoAttachSignature && editingUser.signature
+                          ? "bg-violet-500"
+                          : "bg-slate-300"
+                      } ${!editingUser.signature ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                          editingUser.autoAttachSignature && editingUser.signature ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mode tabs */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSignatureMode("upload")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      signatureMode === "upload"
+                        ? "bg-violet-100 text-violet-700"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Image size={14} />
+                    Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSignatureMode("draw")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      signatureMode === "draw"
+                        ? "bg-violet-100 text-violet-700"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Pen size={14} />
+                    Vẽ chữ ký
+                  </button>
+                </div>
+
+                {/* Upload mode */}
+                {signatureMode === "upload" && (
+                  <div>
+                    <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-violet-400 hover:bg-violet-50/50 transition-colors">
+                      <Upload size={16} className="text-slate-400" />
+                      <span className="text-sm text-slate-500">Chọn file ảnh chữ ký (PNG, JPG)</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 2 * 1024 * 1024) {
+                            error("Lỗi", "File ảnh không được vượt quá 2MB");
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const base64 = ev.target?.result as string;
+                            setEditingUser({ ...editingUser, signature: base64, autoAttachSignature: true });
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {/* Draw mode */}
+                {signatureMode === "draw" && (
+                  <div className="space-y-2">
+                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                      <canvas
+                        ref={canvasRef}
+                        width={500}
+                        height={180}
+                        className="w-full cursor-crosshair"
+                        style={{ touchAction: "none" }}
+                        onMouseDown={(e) => {
+                          setIsDrawing(true);
+                          const canvas = canvasRef.current;
+                          if (!canvas) return;
+                          const ctx = canvas.getContext("2d");
+                          if (!ctx) return;
+                          const rect = canvas.getBoundingClientRect();
+                          const scaleX = canvas.width / rect.width;
+                          const scaleY = canvas.height / rect.height;
+                          ctx.beginPath();
+                          ctx.moveTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
+                        }}
+                        onMouseMove={(e) => {
+                          if (!isDrawing) return;
+                          const canvas = canvasRef.current;
+                          if (!canvas) return;
+                          const ctx = canvas.getContext("2d");
+                          if (!ctx) return;
+                          const rect = canvas.getBoundingClientRect();
+                          const scaleX = canvas.width / rect.width;
+                          const scaleY = canvas.height / rect.height;
+                          ctx.strokeStyle = "#1e293b";
+                          ctx.lineWidth = 2;
+                          ctx.lineCap = "round";
+                          ctx.lineJoin = "round";
+                          ctx.lineTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
+                          ctx.stroke();
+                        }}
+                        onMouseUp={() => setIsDrawing(false)}
+                        onMouseLeave={() => setIsDrawing(false)}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          setIsDrawing(true);
+                          const canvas = canvasRef.current;
+                          if (!canvas) return;
+                          const ctx = canvas.getContext("2d");
+                          if (!ctx) return;
+                          const rect = canvas.getBoundingClientRect();
+                          const touch = e.touches[0];
+                          const scaleX = canvas.width / rect.width;
+                          const scaleY = canvas.height / rect.height;
+                          ctx.beginPath();
+                          ctx.moveTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY);
+                        }}
+                        onTouchMove={(e) => {
+                          e.preventDefault();
+                          if (!isDrawing) return;
+                          const canvas = canvasRef.current;
+                          if (!canvas) return;
+                          const ctx = canvas.getContext("2d");
+                          if (!ctx) return;
+                          const rect = canvas.getBoundingClientRect();
+                          const touch = e.touches[0];
+                          const scaleX = canvas.width / rect.width;
+                          const scaleY = canvas.height / rect.height;
+                          ctx.strokeStyle = "#1e293b";
+                          ctx.lineWidth = 2;
+                          ctx.lineCap = "round";
+                          ctx.lineJoin = "round";
+                          ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY);
+                          ctx.stroke();
+                        }}
+                        onTouchEnd={() => setIsDrawing(false)}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const canvas = canvasRef.current;
+                          if (!canvas) return;
+                          const ctx = canvas.getContext("2d");
+                          if (!ctx) return;
+                          ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                      >
+                        <RotateCcw size={13} />
+                        Xóa / Vẽ lại
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const canvas = canvasRef.current;
+                          if (!canvas) return;
+                          const base64 = canvas.toDataURL("image/png");
+                          setEditingUser({ ...editingUser, signature: base64, autoAttachSignature: true });
+                          success("Đã lưu", "Chữ ký vẽ đã được lưu");
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                      >
+                        <Save size={13} />
+                        Lưu chữ ký vẽ
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Signature Preview */}
+                {editingUser.signature && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-500">Xem trước chữ ký</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingUser({ ...editingUser, signature: "", autoAttachSignature: false })}
+                        className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                      >
+                        Xóa chữ ký
+                      </button>
+                    </div>
+                    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex items-center justify-center">
+                      <img
+                        src={editingUser.signature}
+                        alt="Chữ ký"
+                        className="max-h-24 max-w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"

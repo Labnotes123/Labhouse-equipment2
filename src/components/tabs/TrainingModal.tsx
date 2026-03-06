@@ -1177,7 +1177,8 @@ export default function TrainingModal({
                     columns={planColumns}
                     keyField="id"
                     settingsKey={`device_${device.id}_training_plans`}
-                    defaultPageSize={10}
+                    defaultPageSize={20}
+                    pageSizeOptions={[10, 20, 30, 40]}
                     onExport={() =>
                       exportToExcel(
                         `Dao_Tao_${device.code}`,
@@ -1640,7 +1641,8 @@ export default function TrainingModal({
                 columns={docColumns}
                 keyField="id"
                 settingsKey={`device_${device.id}_training_docs`}
-                defaultPageSize={10}
+                defaultPageSize={20}
+                pageSizeOptions={[10, 20, 30, 40]}
                 onExport={() =>
                   exportToExcel(
                     `Tai_Lieu_Dao_Tao_${device.code}`,
@@ -1674,7 +1676,8 @@ export default function TrainingModal({
                 columns={resultPendingColumns}
                 keyField="id"
                 settingsKey={`device_${device.id}_training_pending_results`}
-                defaultPageSize={10}
+                defaultPageSize={20}
+                pageSizeOptions={[10, 20, 30, 40]}
               />
 
               {/* Results History */}
@@ -1686,7 +1689,8 @@ export default function TrainingModal({
                     columns={resultColumns}
                     keyField="id"
                     settingsKey={`device_${device.id}_training_results_history`}
-                    defaultPageSize={10}
+                    defaultPageSize={20}
+                    pageSizeOptions={[10, 20, 30, 40]}
                   />
                 </div>
               )}

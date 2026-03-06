@@ -222,7 +222,8 @@ export default function LiquidationModal({
                       columns={proposalColumns}
                       keyField="id"
                       settingsKey={`device_${device.id}_liquidation_proposals`}
-                      defaultPageSize={10}
+                      defaultPageSize={20}
+                      pageSizeOptions={[10, 20, 30, 40]}
                    />
                 </div>
               </div>

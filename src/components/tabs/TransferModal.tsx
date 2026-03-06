@@ -265,7 +265,8 @@ export default function TransferModal({
                     columns={proposalColumns}
                     keyField="id"
                     settingsKey={`device_${device.id}_transfer_proposals`}
-                    defaultPageSize={10}
+                    defaultPageSize={20}
+                    pageSizeOptions={[10, 20, 30, 40]}
                   />
                 </>
               ) : (
@@ -415,7 +416,8 @@ export default function TransferModal({
                 columns={historyColumns}
                 keyField="id"
                 settingsKey={`device_${device.id}_transfer_history`}
-                defaultPageSize={10}
+                defaultPageSize={20}
+                pageSizeOptions={[10, 20, 30, 40]}
               />
             </div>
           )}

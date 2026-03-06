@@ -526,7 +526,8 @@ export default function CalibrationTab() {
             columns={requestColumns}
             keyField="id"
             settingsKey="calibration_requests"
-            defaultPageSize={10}
+            defaultPageSize={20}
+            pageSizeOptions={[10, 20, 30, 40]}
           />
         </div>
       )}
@@ -539,7 +540,8 @@ export default function CalibrationTab() {
             columns={scheduleColumns}
             keyField="id"
             settingsKey="calibration_schedules"
-            defaultPageSize={10}
+            defaultPageSize={20}
+            pageSizeOptions={[10, 20, 30, 40]}
           />
         </div>
       )}
@@ -552,7 +554,8 @@ export default function CalibrationTab() {
             columns={resultColumns}
             keyField="id"
             settingsKey="calibration_results"
-            defaultPageSize={10}
+            defaultPageSize={20}
+            pageSizeOptions={[10, 20, 30, 40]}
           />
         </div>
       )}

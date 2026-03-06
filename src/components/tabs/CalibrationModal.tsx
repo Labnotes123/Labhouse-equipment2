@@ -554,7 +554,8 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                       columns={requestColumns}
                       keyField="id"
                       settingsKey={`device_${device.id}_cal_requests`}
-                      defaultPageSize={5}
+                      defaultPageSize={20}
+                      pageSizeOptions={[10, 20, 30, 40]}
                     />
                   </div>
                 </div>
@@ -898,7 +899,8 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                         columns={scheduleColumns}
                         keyField="id"
                         settingsKey={`device_${device.id}_cal_schedules`}
-                        defaultPageSize={10}
+                        defaultPageSize={20}
+                        pageSizeOptions={[10, 20, 30, 40]}
                       />
                     </div>
                   )}
@@ -1004,7 +1006,8 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                         columns={resultColumns}
                         keyField="id"
                         settingsKey={`device_${device.id}_cal_results`}
-                        defaultPageSize={10}
+                        defaultPageSize={20}
+                        pageSizeOptions={[10, 20, 30, 40]}
                       />
                     </div>
                   )}

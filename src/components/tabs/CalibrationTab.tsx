@@ -563,7 +563,7 @@ export default function CalibrationTab() {
       {/* Create Request Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-slate-800">Tạo yêu cầu hiệu chuẩn</h3>
@@ -753,7 +753,7 @@ export default function CalibrationTab() {
       {/* Result Form Modal */}
       {showResultForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-slate-800">Thêm kết quả hiệu chuẩn</h3>

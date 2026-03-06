@@ -1057,7 +1057,7 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       {/* ── Proposal Form Modal ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col">
             {/* Header */}
             <div className="p-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
               <div>
@@ -1549,7 +1549,7 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
       {/* ── Register Device Modal ── */}
       {registerProposal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">

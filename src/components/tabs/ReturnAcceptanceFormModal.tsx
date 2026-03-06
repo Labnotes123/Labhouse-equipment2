@@ -118,6 +118,26 @@ export function ReturnAcceptanceFormModal({
                   />
                 </div>
                 <div>
+                  <label className="text-xs text-slate-500 font-bold">Đơn vị vận chuyển</label>
+                  <input
+                    value={form.transportPartner}
+                    onChange={(event) => onUpdate((prev) => ({ ...prev, transportPartner: event.target.value }))}
+                    placeholder="Công ty vận chuyển / NCC"
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                    disabled={!canEdit}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 font-bold">Liên hệ vận chuyển</label>
+                  <input
+                    value={form.transportContact}
+                    onChange={(event) => onUpdate((prev) => ({ ...prev, transportContact: event.target.value }))}
+                    placeholder="SĐT/Email liên hệ vận chuyển"
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                    disabled={!canEdit}
+                  />
+                </div>
+                <div>
                   <label className="text-xs text-slate-500 font-bold">Thời gian tiếp nhận</label>
                   <input
                     type="datetime-local"

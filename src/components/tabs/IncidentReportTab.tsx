@@ -101,6 +101,7 @@ export default function IncidentReportTab() {
     deviceName: "",
     deviceCode: "",
     specialty: "",
+    severity: "medium",
     incidentDateTime: "",
     discoveredBy: "",
     discoveredByRole: "",
@@ -257,6 +258,7 @@ export default function IncidentReportTab() {
       deviceName: form.deviceName || "",
       deviceCode: form.deviceCode || "",
       specialty: form.specialty || "",
+      severity: (form.severity as any) || "medium",
       incidentDateTime: form.incidentDateTime || "",
       discoveredBy: form.discoveredBy || "",
       discoveredByRole: form.discoveredByRole || "",
@@ -337,6 +339,7 @@ export default function IncidentReportTab() {
       deviceName: form.deviceName || "",
       deviceCode: form.deviceCode || "",
       specialty: form.specialty || "",
+      severity: (form.severity as any) || "medium",
       incidentDateTime: form.incidentDateTime || "",
       discoveredBy: form.discoveredBy || "",
       discoveredByRole: form.discoveredByRole || "",
@@ -429,8 +432,31 @@ export default function IncidentReportTab() {
     const payload = withRequiredIncidentFields(incident, finalSubmitUpdates);
     updateIncident(incident.id, payload).catch(console.error);
     
-    // Send notification (simulated)
-    info("Thông báo", `Đã gửi thông báo tới ${incident.deviceManager} và ${incident.reportedBy}`);
+    // Real notification: manager + reporter (if found)
+    [incident.deviceManager, incident.reportedBy]
+      .filter(Boolean)
+      .forEach((recipientName) => {
+        const recipient = MOCK_USERS_LIST.find((u) => u.fullName === recipientName);
+        if (!recipient) return;
+        fetch("/api/notifications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "approval_request",
+            priority: "high",
+            title: "Phiếu sự cố cần duyệt",
+            message: `${incident.reportCode} cần phê duyệt`,
+            recipientId: recipient.id,
+            recipientName: recipient.fullName,
+            recipientEmail: recipient.email,
+            senderId: user?.id,
+            senderName: user?.fullName,
+            relatedType: "incident",
+            relatedCode: incident.reportCode,
+            relatedId: incident.id,
+          }),
+        }).catch(console.error);
+      });
     success("Thành công", "Đã gửi phiếu báo cáo sự cố để phê duyệt");
   };
 
@@ -1147,6 +1173,22 @@ export default function IncidentReportTab() {
                     onChange={(e) => setForm({ ...form, discoveredByRole: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Mức độ nghiêm trọng</label>
+                  <select
+                    value={form.severity || "medium"}
+                    onChange={(e) => setForm({ ...form, severity: e.target.value as IncidentReport["severity"] })}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                  >
+                    <option value="low">Thấp</option>
+                    <option value="medium">Trung bình</option>
+                    <option value="high">Cao</option>
+                    <option value="critical">Nghiêm trọng</option>
+                  </select>
                 </div>
               </div>
 

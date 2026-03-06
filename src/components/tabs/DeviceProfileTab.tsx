@@ -211,6 +211,8 @@ export interface ReturnAcceptanceFormState {
   receiveCondition: string;
   note: string;
   handoverBy: string;
+  transportPartner: string;
+  transportContact: string;
   receivedAt: string;
   receiver: string;
   attachments: AttachedFile[];
@@ -1007,6 +1009,8 @@ export default function DeviceProfileTab() {
     receiveCondition: "",
     note: "",
     handoverBy: "",
+    transportPartner: "",
+    transportContact: "",
     receivedAt: new Date().toISOString().slice(0, 16),
     receiver: user?.fullName || "",
     attachments: [],
@@ -1623,6 +1627,8 @@ export default function DeviceProfileTab() {
           returnReason: record.acceptanceForm?.note || "Tiếp nhận thiết bị sau điều chuyển",
           deliveredBy: record.acceptanceForm?.handoverBy,
           receivedBy: record.acceptanceForm?.receiver || user?.fullName,
+          transportPartner: record.acceptanceForm?.transportPartner,
+          transportContact: record.acceptanceForm?.transportContact,
           transportDate: record.acceptanceForm?.receivedAt,
           checklist: {
             handoverCode: record.handoverCode,

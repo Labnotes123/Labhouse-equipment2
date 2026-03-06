@@ -1430,7 +1430,7 @@ export default function AdminTab() {
       {/* User Modal */}
       {showUserModal && editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -1961,7 +1961,7 @@ export default function AdminTab() {
       {/* Profile Modal */}
       {showProfileModal && editingProfile && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-[95vw] xl:max-w-[1600px] max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -2467,7 +2467,7 @@ export default function AdminTab() {
       {/* Branch Modal */}
       {showBranchModal && editingBranch && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-green-500 to-emerald-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2486,7 +2486,7 @@ export default function AdminTab() {
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-0">
               <div>
                 <label className="block text-sm font-semibold text-slate-600 mb-1">Tên Chi nhánh *</label>
                 <input
@@ -2619,7 +2619,7 @@ export default function AdminTab() {
       {/* Department Modal */}
       {showDepartmentModal && editingDepartment && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-orange-500 to-amber-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2638,7 +2638,7 @@ export default function AdminTab() {
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-0">
               <div>
                 <label className="block text-sm font-semibold text-slate-600 mb-1">Tên Khoa phòng *</label>
                 <input
@@ -2789,7 +2789,7 @@ export default function AdminTab() {
       {/* Position Modal */}
       {showPositionModal && editingPosition && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-cyan-500 to-blue-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -2991,7 +2991,7 @@ export default function AdminTab() {
       {/* Install Location Modal */}
       {showInstallLocationModal && editingInstallLocation && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-teal-500 to-emerald-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -3234,7 +3234,7 @@ export default function AdminTab() {
       {/* Supplier Modal */}
       {showSupplierModal && editingSupplier && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-pink-500 to-rose-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -3761,6 +3761,17 @@ export default function AdminTab() {
   const [deleteFromDate, setDeleteFromDate] = useState("");
   const [deleteToDate, setDeleteToDate] = useState("");
 
+  // Body scroll lock when any modal is open
+  useEffect(() => {
+    const anyModalOpen = showUserModal || showProfileModal || showBranchModal || showDepartmentModal || showPositionModal || showInstallLocationModal || showSupplierModal || showDeleteHistoryModal || showRestoreConfirm;
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showUserModal, showProfileModal, showBranchModal, showDepartmentModal, showPositionModal, showInstallLocationModal, showSupplierModal, showDeleteHistoryModal, showRestoreConfirm]);
+
   const handleDeleteHistoryNow = () => {
     // Show modal to select date range
     setDeleteFromDate("");
@@ -3887,7 +3898,7 @@ export default function AdminTab() {
       {/* Delete History Modal */}
       {showDeleteHistoryModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+          <div className="bg-white rounded-3xl w-full max-w-[90vw] h-[85vh] shadow-2xl transform transition-all my-auto flex flex-col">
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-slate-500 to-slate-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -3906,7 +3917,7 @@ export default function AdminTab() {
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-0">
               <p className="text-sm text-slate-600">
                 Chọn khoảng thời gian lịch sử cần xóa. Các bản ghi trong khoảng thời gian này sẽ bị xóa vĩnh viễn.
               </p>

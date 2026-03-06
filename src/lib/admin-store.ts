@@ -7,6 +7,7 @@ import {
   mockPositions,
   mockSuppliers,
   mockDepartments,
+  mockInstallationLocations,
   countries as mockCountries,
   mockHistoryConfig,
   type UserProfile,
@@ -16,6 +17,7 @@ import {
   type Supplier,
   type Permission,
   type Department,
+  type InstallationLocation,
   type HistoryConfig,
 } from "@/lib/mockData";
 
@@ -27,6 +29,7 @@ type AdminStore = {
   positions: Position[];
   suppliers: Supplier[];
   departments: Department[];
+  installationLocations: InstallationLocation[];
   countries: string[];
   historyConfig: HistoryConfig;
 };
@@ -42,6 +45,7 @@ const DEFAULT_STORE: AdminStore = {
   positions: [...mockPositions],
   suppliers: [...mockSuppliers],
   departments: [...mockDepartments],
+  installationLocations: [...mockInstallationLocations],
   countries: [...mockCountries],
   historyConfig: { ...mockHistoryConfig },
 };
@@ -60,6 +64,7 @@ function loadFromDisk(): AdminStore {
         positions: parsed.positions ?? DEFAULT_STORE.positions,
         suppliers: parsed.suppliers ?? DEFAULT_STORE.suppliers,
         departments: parsed.departments ?? DEFAULT_STORE.departments,
+        installationLocations: parsed.installationLocations ?? DEFAULT_STORE.installationLocations,
         countries: parsed.countries ?? DEFAULT_STORE.countries,
         historyConfig: parsed.historyConfig ?? DEFAULT_STORE.historyConfig,
       };
@@ -389,6 +394,66 @@ export function deleteDepartment(id: string): boolean {
   store.departments = store.departments.filter((d) => d.id !== id);
   persist(store);
   return store.departments.length < sizeBefore;
+}
+
+// === INSTALLATION LOCATIONS ===
+export function listInstallationLocations(): InstallationLocation[] {
+  return getStore().installationLocations;
+}
+
+export function findInstallationLocation(id: string): InstallationLocation | undefined {
+  return getStore().installationLocations.find((l) => l.id === id);
+}
+
+export function createInstallationLocation(payload: Partial<InstallationLocation>): InstallationLocation {
+  const store = getStore();
+  const department = payload.departmentId ? store.departments.find((d) => d.id === payload.departmentId) : undefined;
+  const branchId = payload.branchId || department?.branchId || "";
+  const branchName = payload.branchName || department?.branchName || "";
+  const location: InstallationLocation = {
+    id: makeId("loc"),
+    code: payload.code || `VT-${Date.now()}`,
+    name: payload.name || "",
+    departmentId: payload.departmentId || "",
+    departmentName: payload.departmentName || department?.name || "",
+    branchId,
+    branchName,
+    isActive: payload.isActive ?? true,
+    createdAt: new Date().toISOString(),
+    updatedAt: payload.updatedAt,
+  };
+  store.installationLocations = [location, ...store.installationLocations];
+  persist(store);
+  return location;
+}
+
+export function updateInstallationLocation(id: string, payload: Partial<InstallationLocation>): InstallationLocation | undefined {
+  const store = getStore();
+  const index = store.installationLocations.findIndex((l) => l.id === id);
+  if (index === -1) return undefined;
+  const base = store.installationLocations[index];
+  const departmentId = payload.departmentId ?? base.departmentId;
+  const department = departmentId ? store.departments.find((d) => d.id === departmentId) : undefined;
+  const updated: InstallationLocation = {
+    ...base,
+    ...payload,
+    departmentId,
+    departmentName: payload.departmentName ?? department?.name ?? base.departmentName,
+    branchId: payload.branchId ?? department?.branchId ?? base.branchId,
+    branchName: payload.branchName ?? department?.branchName ?? base.branchName,
+    updatedAt: new Date().toISOString(),
+  };
+  store.installationLocations[index] = updated;
+  persist(store);
+  return updated;
+}
+
+export function deleteInstallationLocation(id: string): boolean {
+  const store = getStore();
+  const sizeBefore = store.installationLocations.length;
+  store.installationLocations = store.installationLocations.filter((l) => l.id !== id);
+  persist(store);
+  return store.installationLocations.length < sizeBefore;
 }
 
 // === COUNTRIES ===

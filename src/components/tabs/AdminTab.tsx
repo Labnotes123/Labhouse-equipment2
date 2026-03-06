@@ -35,6 +35,7 @@ import {
   Database,
   Upload,
   RotateCcw,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -50,6 +51,7 @@ import {
   Department,
   Position,
   Supplier,
+  InstallationLocation,
   DetailedPermission,
   DEFAULT_DETAILED_PERMISSIONS,
   PermissionModule,
@@ -74,6 +76,7 @@ type AdminSection =
   | "branches"
   | "departments" 
   | "positions" 
+  | "install_locations"
   | "countries"
   | "suppliers"
   | "history_config"
@@ -86,7 +89,8 @@ const sections: { id: AdminSection; label: string; icon: React.ReactNode; color:
   { id: "profiles", label: "Cấu hình Profile", icon: <UserCheck size={20} />, color: "from-blue-500 to-indigo-600" },
   { id: "branches", label: "Chi nhánh", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
   { id: "departments", label: "Khoa phòng", icon: <Building2 size={20} />, color: "from-orange-500 to-amber-600" },
-  { id: "positions", label: "Vị trí/Chức vụ", icon: <Briefcase size={20} />, color: "from-cyan-500 to-blue-600" },
+  { id: "positions", label: "Chức vụ", icon: <Briefcase size={20} />, color: "from-cyan-500 to-blue-600" },
+  { id: "install_locations", label: "Vị trí lắp đặt", icon: <MapPin size={20} />, color: "from-teal-500 to-emerald-600" },
   { id: "countries", label: "Nước sản xuất", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
   { id: "suppliers", label: "Nhà cung cấp", icon: <Truck size={20} />, color: "from-pink-500 to-rose-600" },
   { id: "history_config", label: "Cấu hình lịch sử", icon: <History size={20} />, color: "from-slate-500 to-zinc-600" },
@@ -376,6 +380,11 @@ export default function AdminTab() {
   const [showPositionModal, setShowPositionModal] = useState(false);
   const [newPosition, setNewPosition] = useState({ name: "", description: "", departmentId: "" });
 
+  // Installation Location state
+  const [installLocations, setInstallLocations] = useState<InstallationLocation[]>([]);
+  const [editingInstallLocation, setEditingInstallLocation] = useState<InstallationLocation | null>(null);
+  const [showInstallLocationModal, setShowInstallLocationModal] = useState(false);
+
   // Country state
   const [countryList, setCountryList] = useState<string[]>([]);
   const [newCountry, setNewCountry] = useState("");
@@ -450,6 +459,18 @@ export default function AdminTab() {
     }
   }, []);
 
+  const fetchInstallLocations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/installation-locations");
+      if (res.ok) {
+        const data = await res.json() as InstallationLocation[];
+        setInstallLocations(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch installation locations", e);
+    }
+  }, []);
+
   const fetchSuppliers = useCallback(async () => {
     try {
       const res = await fetch("/api/suppliers");
@@ -503,11 +524,12 @@ export default function AdminTab() {
     fetchProfiles();
     fetchBranches();
     fetchPositions();
+    fetchInstallLocations();
     fetchSuppliers();
     fetchDepartments();
     fetchCountries();
     fetchHistoryConfig();
-  }, [fetchUsers, fetchProfiles, fetchBranches, fetchPositions, fetchSuppliers, fetchDepartments, fetchCountries, fetchHistoryConfig]);
+  }, [fetchUsers, fetchProfiles, fetchBranches, fetchPositions, fetchInstallLocations, fetchSuppliers, fetchDepartments, fetchCountries, fetchHistoryConfig]);
 
   if (!canAccess) {
     return (
@@ -958,6 +980,69 @@ export default function AdminTab() {
     } catch (err) {
       console.error("Position delete error", err);
       error("Lỗi", "Không thể xóa chức vụ");
+    }
+  };
+
+  // ============ INSTALLATION LOCATION MANAGEMENT ============
+  const handleSaveInstallLocation = async () => {
+    if (editingInstallLocation) {
+      try {
+        if (editingInstallLocation.id) {
+          const res = await fetch(`/api/installation-locations/${editingInstallLocation.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: editingInstallLocation.name,
+              departmentId: editingInstallLocation.departmentId,
+              departmentName: editingInstallLocation.departmentName,
+              branchId: editingInstallLocation.branchId,
+              branchName: editingInstallLocation.branchName,
+              isActive: editingInstallLocation.isActive,
+            }),
+          });
+          if (!res.ok) throw new Error("Failed to update");
+          const updated = await res.json();
+          setInstallLocations(prev => prev.map(l => l.id === editingInstallLocation.id ? { ...updated, createdAt: l.createdAt } : l));
+          success("Đã cập nhật", "Vị trí lắp đặt đã được cập nhật");
+        } else {
+          const res = await fetch("/api/installation-locations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: editingInstallLocation.name,
+              departmentId: editingInstallLocation.departmentId,
+              departmentName: editingInstallLocation.departmentName,
+              branchId: editingInstallLocation.branchId,
+              branchName: editingInstallLocation.branchName,
+              isActive: editingInstallLocation.isActive ?? true,
+            }),
+          });
+          if (!res.ok) throw new Error("Failed to create");
+          const created = await res.json();
+          setInstallLocations(prev => [...prev, { ...created, createdAt: new Date().toISOString() }]);
+          success("Đã thêm", "Vị trí lắp đặt mới đã được thêm");
+        }
+      } catch (err) {
+        console.error("InstallLocation save error:", err);
+        error("Lỗi", "Không thể lưu vị trí lắp đặt");
+      }
+    }
+    setShowInstallLocationModal(false);
+    setEditingInstallLocation(null);
+  };
+
+  const handleDeleteInstallLocation = async (locationId: string) => {
+    try {
+      const res = await fetch(`/api/installation-locations/${locationId}`, { method: "DELETE" });
+      if (!res.ok) {
+        error("Lỗi", "Không thể xóa vị trí lắp đặt");
+        return;
+      }
+      setInstallLocations(prev => prev.filter(l => l.id !== locationId));
+      success("Đã xóa", "Vị trí lắp đặt đã được xóa");
+    } catch (err) {
+      console.error("InstallLocation delete error", err);
+      error("Lỗi", "Không thể xóa vị trí lắp đặt");
     }
   };
 
@@ -1435,11 +1520,21 @@ export default function AdminTab() {
                   <label className="block text-sm font-semibold text-slate-600 mb-1">Khoa phòng *</label>
                   <select
                     value={editingUser.department}
-                    onChange={(e) => setEditingUser({ ...editingUser, department: e.target.value })}
+                    onChange={(e) => {
+                      const selectedDept = departments.find(d => d.name === e.target.value);
+                      const parentBranch = selectedDept ? branches.find(b => b.id === selectedDept.branchId) : null;
+                      setEditingUser({
+                        ...editingUser,
+                        department: e.target.value,
+                        ...(parentBranch ? { branch: parentBranch.name } : {}),
+                      });
+                    }}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-purple-500"
                   >
                     <option value="">Chọn khoa phòng</option>
-                    {departments.filter(d => d.isActive).map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                    {departments
+                      .filter(d => d.isActive && (!editingUser.branch || branches.find(b => b.name === editingUser.branch)?.id === d.branchId))
+                      .map(d => <option key={d.id} value={d.name}>{d.code} - {d.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -1447,11 +1542,20 @@ export default function AdminTab() {
                 <label className="block text-sm font-semibold text-slate-600 mb-1">Chi nhánh *</label>
                 <select
                   value={editingUser.branch}
-                  onChange={(e) => setEditingUser({ ...editingUser, branch: e.target.value })}
+                  onChange={(e) => {
+                    const selectedBranch = branches.find(b => b.name === e.target.value);
+                    const currentDept = departments.find(d => d.name === editingUser.department);
+                    const deptBelongsToBranch = currentDept && selectedBranch && currentDept.branchId === selectedBranch.id;
+                    setEditingUser({
+                      ...editingUser,
+                      branch: e.target.value,
+                      ...(!deptBelongsToBranch ? { department: "" } : {}),
+                    });
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-purple-500"
                 >
                   <option value="">Chọn chi nhánh</option>
-                  {branches.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                  {branches.filter(b => b.isActive).map(b => <option key={b.id} value={b.name}>{b.code} - {b.name}</option>)}
                 </select>
               </div>
               <div>
@@ -2342,7 +2446,7 @@ export default function AdminTab() {
                 >
                   <option value="">-- Chọn Chi nhánh --</option>
                   {branches.filter(b => b.isActive).map(branch => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                    <option key={branch.id} value={branch.id}>{branch.code} - {branch.name}</option>
                   ))}
                 </select>
               </div>
@@ -2526,7 +2630,7 @@ export default function AdminTab() {
                 >
                   <option value="">-- Chọn Khoa phòng --</option>
                   {departments.filter(d => d.isActive).map(dept => (
-                    <option key={dept.id} value={dept.id}>{dept.name} ({dept.branchName})</option>
+                    <option key={dept.id} value={dept.id}>{dept.code} - {dept.name} ({dept.branchName})</option>
                   ))}
                 </select>
               </div>
@@ -2570,6 +2674,187 @@ export default function AdminTab() {
                 onClick={handleSavePosition}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
                 style={{ background: "linear-gradient(135deg, #06b6d4, #0891b2)" }}
+              >
+                <Save size={18} />
+                Lưu thông tin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderInstallLocationsSection = () => (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <MapPin size={18} className="text-teal-600" />
+            Danh sách Vị trí lắp đặt
+          </h3>
+          <button
+            onClick={() => {
+              const maxCode = installLocations.reduce((max, l) => {
+                const num = parseInt(l.code?.replace(/\D/g, '') || '0');
+                return num > max ? num : max;
+              }, 0);
+              const newCode = String(maxCode + 1).padStart(3, '0');
+              setEditingInstallLocation({ id: "", name: "", code: newCode, departmentId: "", isActive: true });
+              setShowInstallLocationModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm"
+            style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488)" }}
+          >
+            <Plus size={16} />
+            Thêm Vị trí
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mã</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Tên Vị trí</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Khoa phòng</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Chi nhánh</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Trạng thái</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {installLocations.map(loc => (
+                <tr key={loc.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-xs font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded-lg">{loc.code}</span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-slate-700">{loc.name}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{loc.departmentName || <span className="text-slate-400 italic">Chưa chọn</span>}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{loc.branchName || <span className="text-slate-400 italic">—</span>}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${loc.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                      {loc.isActive ? "Hoạt động" : "Không hoạt động"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => { setEditingInstallLocation(loc); setShowInstallLocationModal(true); }}
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInstallLocation(loc.id)}
+                        className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Install Location Modal */}
+      {showInstallLocationModal && editingInstallLocation && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl transform transition-all">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-teal-500 to-emerald-600">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <MapPin size={22} className="text-white" />
+                  </div>
+                  <h3 className="font-bold text-xl text-white">
+                    {editingInstallLocation.id ? "Chỉnh sửa Vị trí" : "Thêm Vị trí mới"}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => { setShowInstallLocationModal(false); setEditingInstallLocation(null); }}
+                  className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                >
+                  <X size={20} className="text-white" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+              {editingInstallLocation.id && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-600 mb-1">ID Vị trí</label>
+                  <input type="text" value={editingInstallLocation.id} disabled className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500" />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Tên Vị trí *</label>
+                <input
+                  type="text"
+                  value={editingInstallLocation.name}
+                  onChange={(e) => setEditingInstallLocation({ ...editingInstallLocation, name: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-teal-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Mã Vị trí</label>
+                <input type="text" value={editingInstallLocation.code} disabled className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Thuộc Khoa phòng *</label>
+                <select
+                  value={editingInstallLocation.departmentId || ""}
+                  onChange={(e) => {
+                    const selectedDept = departments.find(d => d.id === e.target.value);
+                    setEditingInstallLocation({
+                      ...editingInstallLocation,
+                      departmentId: e.target.value,
+                      departmentName: selectedDept?.name || '',
+                      branchId: selectedDept?.branchId || '',
+                      branchName: selectedDept?.branchName || ''
+                    });
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-teal-500"
+                >
+                  <option value="">-- Chọn Khoa phòng --</option>
+                  {departments.filter(d => d.isActive).map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.code} - {dept.name} ({dept.branchName})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-600 mb-1">Chi nhánh</label>
+                <input
+                  type="text"
+                  value={editingInstallLocation.branchName || (editingInstallLocation.departmentId ? (departments.find(d => d.id === editingInstallLocation.departmentId)?.branchName || '') : '')}
+                  disabled
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500"
+                  placeholder="Tự động điền khi chọn khoa phòng"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={editingInstallLocation.isActive}
+                  onChange={(e) => setEditingInstallLocation({ ...editingInstallLocation, isActive: e.target.checked })}
+                  className="w-4 h-4 rounded text-teal-600"
+                />
+                <span className="text-sm text-slate-600">Hoạt động</span>
+              </div>
+            </div>
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+              <button
+                onClick={() => { setShowInstallLocationModal(false); setEditingInstallLocation(null); }}
+                className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleSaveInstallLocation}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+                style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488)" }}
               >
                 <Save size={18} />
                 Lưu thông tin
@@ -3450,6 +3735,8 @@ export default function AdminTab() {
         return renderDepartmentsSection();
       case "positions":
         return renderPositionsSection();
+      case "install_locations":
+        return renderInstallLocationsSection();
       case "countries":
         return renderCountriesSection();
       case "suppliers":

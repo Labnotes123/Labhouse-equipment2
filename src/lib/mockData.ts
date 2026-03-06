@@ -197,6 +197,19 @@ export interface Position {
   updatedAt?: string;
 }
 
+export interface InstallationLocation {
+  id: string;
+  name: string;
+  code: string;
+  departmentId: string;
+  departmentName?: string;
+  branchId?: string;
+  branchName?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Supplier {
   id: string;
   name: string;
@@ -2134,6 +2147,16 @@ export const mockPositions: Position[] = [
   { id: "pos6", name: "Quản lý chất lượng", code: "VT006", departmentId: "d7", departmentName: "Quản lý chất lượng", branchId: "b1", branchName: "LabHouse Central", description: "Quản lý chất lượng", isActive: true, createdAt: "2023-01-01T00:00:00" },
   { id: "pos7", name: "Quản lý trang thiết bị", code: "VT007", departmentId: "d8", departmentName: "Thiết bị", branchId: "b1", branchName: "LabHouse Central", description: "Quản lý trang thiết bị", isActive: true, createdAt: "2023-01-01T00:00:00" },
   { id: "pos8", name: "Quản trị viên", code: "VT008", departmentId: "d5", departmentName: "IT", branchId: "b1", branchName: "LabHouse Central", description: "Quản trị hệ thống", isActive: true, createdAt: "2023-01-01T00:00:00" },
+];
+
+// ============ MOCK INSTALLATION LOCATIONS ============
+
+export const mockInstallationLocations: InstallationLocation[] = [
+  { id: "loc1", name: "Phòng xét nghiệm Huyết học", code: "VT001", departmentId: "d1", departmentName: "Huyết học", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "loc2", name: "Phòng xét nghiệm Sinh hóa", code: "VT002", departmentId: "d2", departmentName: "Sinh hóa", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "loc3", name: "Phòng Vi sinh", code: "VT003", departmentId: "d3", departmentName: "Vi sinh", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "loc4", name: "Kho thiết bị", code: "VT004", departmentId: "d8", departmentName: "Thiết bị", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
+  { id: "loc5", name: "Phòng IT", code: "VT005", departmentId: "d5", departmentName: "IT", branchId: "b1", branchName: "LabHouse Central", isActive: true, createdAt: "2023-01-01T00:00:00" },
 ];
 
 // ============ MOCK SUPPLIERS ============

@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/contexts/ToastContext";
 import { User } from "@/contexts/AuthContext";
 import { previewTicketCode } from "@/lib/ticket-code";
+import { SmartTable, Column } from "@/components/SmartTable";
 import {
   AttachedFile,
   Device,
@@ -460,7 +461,7 @@ export default function IncidentReportModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl max-w-[98vw] xl:max-w-[1900px] w-full max-h-[98vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-slate-800">Báo cáo sự cố thiết bị</h2>
@@ -518,105 +519,51 @@ export default function IncidentReportModal({
                       >
                         <Plus size={18} /> Tạo phiếu
                       </button>
-                      <button
-                        onClick={() => {
-                          downloadCsvFile(
-                            `PSC_${device.code}_${new Date().toISOString().split("T")[0]}.csv`,
-                            ["Mã phiếu", "Thiết bị", "Người báo cáo", "Thời gian", "Trạng thái"],
-                            deviceIncidents.map((incident) => [
-                              incident.reportCode,
-                              `${incident.deviceCode} - ${incident.deviceName}`,
-                              incident.reportedBy || "",
-                              formatDateTimeLabel(incident.incidentDateTime),
-                              incident.status,
-                            ]),
-                            "Đã xuất danh sách phiếu sự cố"
-                          );
-                        }}
-                        className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
-                      >
-                        <Download size={16} /> Xuất CSV
-                      </button>
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã phiếu</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Thời gian</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Người báo cáo</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Trạng thái</th>
-                          <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {deviceIncidents.map((incident) => (
-                          <tr key={incident.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-mono text-red-600">{incident.reportCode}</td>
-                            <td className="px-4 py-3">{formatDateTimeLabel(incident.incidentDateTime)}</td>
-                            <td className="px-4 py-3">{incident.reportedBy}</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                incident.status === "Chờ duyệt"
-                                  ? "bg-amber-100 text-amber-700"
-                                  : incident.status === "Đã duyệt"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : incident.status === "Hoàn thành"
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-slate-100 text-slate-700"
-                              }`}>
-                                {incident.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <div className="flex justify-center gap-2">
-                                <button
-                                  onClick={() => handleEditIncident(incident)}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                                  title="Chỉnh sửa"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button
-                                  onClick={() => handleExportIncident(incident)}
-                                  className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
-                                  title="Xuất CSV"
-                                >
-                                  <Download size={16} />
-                                </button>
-                                <button
-                                  onClick={() => openPrintableIncident(incident)}
-                                  className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
-                                  title="In/PDF"
-                                >
-                                  <FileText size={16} />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setCurrentIncidentForWorkOrder(incident);
-                                    setIncidentModalTab("work-orders");
-                                  }}
-                                  className="p-1.5 text-amber-600 hover:bg-amber-50 rounded"
-                                  title="Liên hệ NCC"
-                                >
-                                  <Headphones size={16} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        {deviceIncidents.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                              Chưa có phiếu sự cố nào
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                  <SmartTable<IncidentReport>
+                    data={deviceIncidents}
+                    keyField="id"
+                    defaultPageSize={10}
+                    pageSizeOptions={[5, 10, 15, 20]}
+                    settingsKey={`incident_reports_${device.id}`}
+                    onExport={(data) => {
+                      downloadCsvFile(
+                        `PSC_${device.code}_${new Date().toISOString().split("T")[0]}.csv`,
+                        ["Mã phiếu", "Thiết bị", "Người báo cáo", "Thời gian", "Trạng thái"],
+                        data.map((incident) => [
+                          incident.reportCode,
+                          `${incident.deviceCode} - ${incident.deviceName}`,
+                          incident.reportedBy || "",
+                          formatDateTimeLabel(incident.incidentDateTime),
+                          incident.status,
+                        ]),
+                        "Đã xuất danh sách phiếu sự cố"
+                      );
+                    }}
+                    columns={[
+                      { key: "reportCode", label: "Mã phiếu", sortable: true, filterable: true, render: (item) => <span className="font-mono text-red-600">{item.reportCode}</span> },
+                      { key: "incidentDateTime", label: "Thời gian", sortable: true, dateFilter: true, render: (item) => <>{formatDateTimeLabel(item.incidentDateTime)}</> },
+                      { key: "reportedBy", label: "Người báo cáo", sortable: true, filterable: true },
+                      { key: "status", label: "Trạng thái", sortable: true, filterable: true, render: (item) => (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          item.status === "Chờ duyệt" ? "bg-amber-100 text-amber-700"
+                            : item.status === "Đã duyệt" ? "bg-blue-100 text-blue-700"
+                            : item.status === "Hoàn thành" ? "bg-green-100 text-green-700"
+                            : "bg-slate-100 text-slate-700"
+                        }`}>{item.status}</span>
+                      )},
+                      { key: "actions", label: "Thao tác", render: (item) => (
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleEditIncident(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Chỉnh sửa"><Edit size={16} /></button>
+                          <button onClick={() => handleExportIncident(item)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded" title="Xuất CSV"><Download size={16} /></button>
+                          <button onClick={() => openPrintableIncident(item)} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="In/PDF"><FileText size={16} /></button>
+                          <button onClick={() => { setCurrentIncidentForWorkOrder(item); setIncidentModalTab("work-orders"); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Liên hệ NCC"><Headphones size={16} /></button>
+                        </div>
+                      )},
+                    ]}
+                  />
                 </>
               ) : (
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
@@ -1196,67 +1143,63 @@ export default function IncidentReportModal({
                 </button>
               </div>
 
-              <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã công việc</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã phiếu sự cố</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Người liên hệ</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Bắt đầu</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Trạng thái</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {allDeviceWorkOrders.map((wo) => (
-                      <tr key={wo.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-mono text-amber-600">{wo.workOrderCode}</td>
-                        <td className="px-4 py-3">{wo.incidentReportCode}</td>
-                        <td className="px-4 py-3">{wo.contactPerson}</td>
-                        <td className="px-4 py-3">{wo.startDateTime || "—"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            wo.status === "Mở" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
-                          }`}>
-                            {wo.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center gap-2">
-                            <button
-                              onClick={() => {
-                                const ownerIncident = deviceIncidents.find((incident) => incident.reportCode === wo.incidentReportCode) || null;
-                                setCurrentIncidentForWorkOrder(ownerIncident);
-                                setEditingWorkOrder(wo as WorkOrder);
-                                setWorkOrderForm({ ...wo });
-                                setEngineerSignature(wo.signatureUrl || "");
-                                setShowWorkOrderForm(true);
-                              }}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                              title="Cập nhật"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              onClick={() => openAttachmentViewer(`Đính kèm của ${wo.workOrderCode}`, wo.attachments || [])}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                              title="Đính kèm"
-                            >
-                              <Paperclip size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {allDeviceWorkOrders.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-slate-500">Chưa có công việc nào</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <SmartTable<WorkOrder & { incidentReportCode: string }>
+                data={allDeviceWorkOrders}
+                keyField="id"
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 15, 20]}
+                settingsKey={`work_orders_${device.id}`}
+                onExport={(data) => {
+                  downloadCsvFile(
+                    `WO_${device.code}_${new Date().toISOString().split("T")[0]}.csv`,
+                    ["Mã công việc", "Mã phiếu sự cố", "Người liên hệ", "Bắt đầu", "Trạng thái"],
+                    data.map((wo) => [
+                      wo.workOrderCode,
+                      wo.incidentReportCode,
+                      wo.contactPerson || "",
+                      wo.startDateTime || "—",
+                      wo.status,
+                    ]),
+                    "Đã xuất danh sách công việc"
+                  );
+                }}
+                columns={[
+                  { key: "workOrderCode", label: "Mã công việc", sortable: true, filterable: true, render: (item) => <span className="font-mono text-amber-600">{item.workOrderCode}</span> },
+                  { key: "incidentReportCode", label: "Mã phiếu sự cố", sortable: true, filterable: true },
+                  { key: "contactPerson", label: "Người liên hệ", sortable: true, filterable: true },
+                  { key: "startDateTime", label: "Bắt đầu", sortable: true, dateFilter: true, render: (item) => <>{item.startDateTime || "—"}</> },
+                  { key: "status", label: "Trạng thái", sortable: true, filterable: true, render: (item) => (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      item.status === "Mở" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                    }`}>{item.status}</span>
+                  )},
+                  { key: "actions", label: "Thao tác", render: (item) => (
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          const ownerIncident = deviceIncidents.find((incident) => incident.reportCode === item.incidentReportCode) || null;
+                          setCurrentIncidentForWorkOrder(ownerIncident);
+                          setEditingWorkOrder(item as WorkOrder);
+                          setWorkOrderForm({ ...item });
+                          setEngineerSignature(item.signatureUrl || "");
+                          setShowWorkOrderForm(true);
+                        }}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                        title="Cập nhật"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => openAttachmentViewer(`Đính kèm của ${item.workOrderCode}`, item.attachments || [])}
+                        className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                        title="Đính kèm"
+                      >
+                        <Paperclip size={16} />
+                      </button>
+                    </div>
+                  )},
+                ]}
+              />
 
               {showWorkOrderForm && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4" onClick={() => setShowWorkOrderForm(false)}>

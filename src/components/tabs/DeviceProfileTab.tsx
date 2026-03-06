@@ -819,11 +819,17 @@ export default function DeviceProfileTab() {
     }
 
     const nowIso = new Date().toISOString();
+    const deviceTransfers = transferRecords.filter((r) => r.deviceId === selectedDeviceForAction.id);
+    const generatedTransferCode = previewTicketCode(
+      selectedDeviceForAction.code || selectedDeviceForAction.id,
+      "PDC",
+      deviceTransfers.map((r) => r.transferCode)
+    );
     const baseData: TransferProposal = {
       id: editingTransferId || `transfer-${Date.now()}`,
       transferCode: editingTransferId
-        ? transferRecords.find((record) => record.id === editingTransferId)?.transferCode || `DC-${new Date().getFullYear()}-${String(transferCounter).padStart(3, "0")}`
-        : `DC-${new Date().getFullYear()}-${String(transferCounter).padStart(3, "0")}`,
+        ? transferRecords.find((record) => record.id === editingTransferId)?.transferCode || generatedTransferCode
+        : generatedTransferCode,
       deviceId: selectedDeviceForAction.id,
       deviceCode: selectedDeviceForAction.code,
       deviceName: selectedDeviceForAction.name,
@@ -859,11 +865,17 @@ export default function DeviceProfileTab() {
     }
 
     const nowIso = new Date().toISOString();
+    const deviceLiquidations = liquidationRecords.filter((r) => r.deviceId === selectedDeviceForAction.id);
+    const generatedLiquidationCode = previewTicketCode(
+      selectedDeviceForAction.code || selectedDeviceForAction.id,
+      "PTL",
+      deviceLiquidations.map((r) => r.liquidationCode)
+    );
     const baseData: LiquidationProposal = {
       id: editingLiquidationId || `liquidation-${Date.now()}`,
       liquidationCode: editingLiquidationId
-        ? liquidationRecords.find((record) => record.id === editingLiquidationId)?.liquidationCode || `TL-${new Date().getFullYear()}-${String(liquidationCounter).padStart(3, "0")}`
-        : `TL-${new Date().getFullYear()}-${String(liquidationCounter).padStart(3, "0")}`,
+        ? liquidationRecords.find((record) => record.id === editingLiquidationId)?.liquidationCode || generatedLiquidationCode
+        : generatedLiquidationCode,
       deviceId: selectedDeviceForAction.id,
       deviceCode: selectedDeviceForAction.code,
       deviceName: selectedDeviceForAction.name,

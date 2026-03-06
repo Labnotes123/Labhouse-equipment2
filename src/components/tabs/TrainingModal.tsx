@@ -900,7 +900,7 @@ export default function TrainingModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-[98vw] xl:max-w-[1600px] w-full max-h-[95vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl max-w-[98vw] xl:max-w-[1900px] w-full min-h-[90vh] max-h-[98vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10">
           <div>
@@ -948,7 +948,7 @@ export default function TrainingModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-180px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(98vh-180px)]">
           {/* ===== TAB 1: LÊN KẾ HOẠCH ===== */}
           {activeTab === "plans" && (
             <div className="space-y-4">
@@ -1003,7 +1003,7 @@ export default function TrainingModal({
                 </>
               ) : (
                 /* Plan Form */
-                <div className="space-y-4 max-w-[98vw] xl:max-w-[1600px] mx-auto">
+                <div className="space-y-4 max-w-[98vw] xl:max-w-[1900px] mx-auto">
                   <button
                     onClick={() => {
                       setViewMode("list");

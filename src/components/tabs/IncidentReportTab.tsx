@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   AlertTriangle,
   Plus,
@@ -1331,11 +1332,10 @@ export default function IncidentReportTab() {
               {form.conclusion === "đã khắc phục" && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian hoàn thành</label>
-                  <input
-                    type="datetime-local"
+                  <WheelDateTimePicker
+                    mode="datetime"
                     value={form.completionDateTime || ''}
-                    onChange={(e) => setForm({ ...form, completionDateTime: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                    onChange={(val) => setForm({ ...form, completionDateTime: val })}
                   />
                 </div>
               )}

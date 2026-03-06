@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   Gauge,
   Plus,
@@ -641,11 +642,10 @@ export default function CalibrationTab() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Ngày dự kiến hiệu chuẩn <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="date"
+                  <WheelDateTimePicker
+                    mode="date"
                     value={form.expectedDate}
-                    onChange={(e) => setForm({ ...form, expectedDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                    onChange={(val) => setForm({ ...form, expectedDate: val })}
                   />
                 </div>
               </div>
@@ -787,11 +787,10 @@ export default function CalibrationTab() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Ngày thực hiện</label>
-                  <input
-                    type="date"
+                  <WheelDateTimePicker
+                    mode="date"
                     value={form.expectedDate}
-                    onChange={(e) => setForm({ ...form, expectedDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                    onChange={(val) => setForm({ ...form, expectedDate: val })}
                   />
                 </div>
               </div>

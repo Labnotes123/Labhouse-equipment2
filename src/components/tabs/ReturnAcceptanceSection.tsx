@@ -1,4 +1,5 @@
 import { ListChecks, Table, Truck, Search, Upload, ClipboardCheck, Eye, Download, Edit, CheckCircle2, Trash2 } from "lucide-react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import { Device, AttachedFile } from "@/lib/mockData";
 import type { ReturnAcceptanceRecord, ReturnAcceptanceFormState, ReturnAcceptanceTab, ReturnTransportRow } from "./DeviceProfileTab";
 
@@ -208,20 +209,18 @@ export function ReturnAcceptanceSection({
                 <div className="flex flex-wrap items-end gap-3">
                   <div>
                     <label className="text-xs text-slate-500">Từ ngày</label>
-                    <input
-                      type="date"
+                    <WheelDateTimePicker
+                      mode="date"
                       value={returnTransportFilterFrom}
-                      onChange={(event) => onChangeFilterFrom(event.target.value)}
-                      className="mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                      onChange={(val) => onChangeFilterFrom(val)}
                     />
                   </div>
                   <div>
                     <label className="text-xs text-slate-500">Đến ngày</label>
-                    <input
-                      type="date"
+                    <WheelDateTimePicker
+                      mode="date"
                       value={returnTransportFilterTo}
-                      onChange={(event) => onChangeFilterTo(event.target.value)}
-                      className="mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                      onChange={(val) => onChangeFilterTo(val)}
                     />
                   </div>
                   <button

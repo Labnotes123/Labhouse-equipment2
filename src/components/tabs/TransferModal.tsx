@@ -1,4 +1,5 @@
 import { useState } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   X,
   Plus,
@@ -322,20 +323,18 @@ export default function TransferModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian đi *</label>
-                        <input
-                          type="datetime-local"
+                        <WheelDateTimePicker
+                          mode="datetime"
                           value={transferForm.plannedTransferDate || ""}
-                          onChange={(e) => onFormChange({ ...transferForm, plannedTransferDate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                          onChange={(val) => onFormChange({ ...transferForm, plannedTransferDate: val })}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian dự kiến trả</label>
-                        <input
-                          type="datetime-local"
+                        <WheelDateTimePicker
+                          mode="datetime"
                           value={(transferForm as any).returnDate || ""}
-                          onChange={(e) => onFormChange({ ...transferForm, returnDate: e.target.value } as TransferProposal)}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                          onChange={(val) => onFormChange({ ...transferForm, returnDate: val } as TransferProposal)}
                         />
                       </div>
                     </div>

@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useMemo } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   Save,
   X,
@@ -256,11 +257,10 @@ export function DeviceRegistrationModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Ngày bắt đầu sử dụng</label>
-              <input
-                type="date"
+              <WheelDateTimePicker
+                mode="date"
                 value={form.usageStartDate || ""}
-                onChange={(e) => onFormChange({ ...form, usageStartDate: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                onChange={(val) => onFormChange({ ...form, usageStartDate: val })}
               />
             </div>
             <div>

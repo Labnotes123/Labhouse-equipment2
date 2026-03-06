@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   X,
   Plus,
@@ -397,7 +398,7 @@ export default function LiquidationModal({
                         <div className="grid grid-cols-2 gap-6">
                            <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2"><Calendar size={16}/> Ngày thanh lý thực tế</label>
-                              <input type="date" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-emerald-500" />
+                              <WheelDateTimePicker mode="date" value="" onChange={() => {}} />
                            </div>
                            <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">Đơn vị thu mua / Tiêu hủy</label>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   History,
   Search,
@@ -279,18 +280,16 @@ export default function HistoryTab() {
 
           {timeRange === "custom" && (
             <>
-              <input
-                type="date"
+              <WheelDateTimePicker
+                mode="date"
                 value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
-                className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 focus:border-slate-500"
+                onChange={(val) => { setDateFrom(val); setCurrentPage(1); }}
                 placeholder="Từ ngày"
               />
-              <input
-                type="date"
+              <WheelDateTimePicker
+                mode="date"
                 value={dateTo}
-                onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
-                className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 focus:border-slate-500"
+                onChange={(val) => { setDateTo(val); setCurrentPage(1); }}
                 placeholder="Đến ngày"
               />
             </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   Plus,
   Package,
@@ -819,19 +820,19 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
                 {visibleColumns.proposedDate && (
                   <td className="px-4 py-2">
                     <div className="flex gap-1">
-                      <input
-                        type="date"
+                      <WheelDateTimePicker
+                        mode="date"
                         value={colFilters.proposedDate}
-                        onChange={(e) => { setColFilters((f) => ({ ...f, proposedDate: e.target.value })); setPage(1); }}
-                        className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
-                        title="Từ ngày"
+                        onChange={(val) => { setColFilters((f) => ({ ...f, proposedDate: val })); setPage(1); }}
+                        placeholder="Từ ngày"
+                        className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs flex items-center gap-1 bg-white"
                       />
-                      <input
-                        type="date"
+                      <WheelDateTimePicker
+                        mode="date"
                         value={colFilters.proposedDateTo}
-                        onChange={(e) => { setColFilters((f) => ({ ...f, proposedDateTo: e.target.value })); setPage(1); }}
-                        className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
-                        title="Đến ngày"
+                        onChange={(val) => { setColFilters((f) => ({ ...f, proposedDateTo: val })); setPage(1); }}
+                        placeholder="Đến ngày"
+                        className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs flex items-center gap-1 bg-white"
                       />
                     </div>
                   </td>
@@ -1680,7 +1681,7 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
                 {/* Responsible person start date */}
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1.5">Ngày bắt đầu phụ trách</label>
-                  <input type="date" value={regForm.responsiblePersonStart} onChange={(e) => setRegForm((f) => ({ ...f, responsiblePersonStart: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all" />
+                  <WheelDateTimePicker mode="date" value={regForm.responsiblePersonStart} onChange={(val) => setRegForm((f) => ({ ...f, responsiblePersonStart: val }))} />
                 </div>
                 {/* Condition on receive */}
                 <div>
@@ -1693,9 +1694,9 @@ export default function NewDeviceTab({ filterPending = false, onNavigate }: NewD
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1.5">Thời gian sử dụng</label>
                   <div className="flex items-center gap-2">
-                    <input type="time" value={regForm.operatingHoursStart} onChange={(e) => setRegForm((f) => ({ ...f, operatingHoursStart: e.target.value }))} className="flex-1 px-3 py-2.5 rounded-xl border-2 border-slate-200 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all" />
+                    <WheelDateTimePicker mode="time" value={regForm.operatingHoursStart} onChange={(val) => setRegForm((f) => ({ ...f, operatingHoursStart: val }))} />
                     <span className="text-slate-400 text-sm">đến</span>
-                    <input type="time" value={regForm.operatingHoursEnd} onChange={(e) => setRegForm((f) => ({ ...f, operatingHoursEnd: e.target.value }))} className="flex-1 px-3 py-2.5 rounded-xl border-2 border-slate-200 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all" />
+                    <WheelDateTimePicker mode="time" value={regForm.operatingHoursEnd} onChange={(val) => setRegForm((f) => ({ ...f, operatingHoursEnd: val }))} />
                   </div>
                 </div>
                 {/* Install location */}

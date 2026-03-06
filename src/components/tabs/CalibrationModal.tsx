@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   Calendar,
   CheckCircle2,
@@ -591,11 +592,10 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Ngày dự kiến hiệu chuẩn <span className="text-red-500">*</span></label>
-                      <input
-                        type="date"
+                      <WheelDateTimePicker
+                        mode="date"
                         value={calibrationForm.expectedDate}
-                        onChange={(e) => setCalibrationForm({ ...calibrationForm, expectedDate: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-purple-500"
+                        onChange={(val) => setCalibrationForm({ ...calibrationForm, expectedDate: val })}
                       />
                     </div>
                   </div>
@@ -922,11 +922,11 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Ngày hiệu chuẩn thực tế</label>
-                          <input type="date" value={scheduleForm.scheduledDate} onChange={(e) => setScheduleForm({...scheduleForm, scheduledDate: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" />
+                          <WheelDateTimePicker mode="date" value={scheduleForm.scheduledDate} onChange={(val) => setScheduleForm({...scheduleForm, scheduledDate: val})} />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian</label>
-                          <input type="time" value={scheduleForm.scheduledTime} onChange={(e) => setScheduleForm({...scheduleForm, scheduledTime: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" />
+                          <WheelDateTimePicker mode="time" value={scheduleForm.scheduledTime} onChange={(val) => setScheduleForm({...scheduleForm, scheduledTime: val})} />
                         </div>
                       </div>
                       <div>
@@ -1037,7 +1037,7 @@ const [calibrationResults, setCalibrationResults] = useState<CalibrationResult[]
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Ngày thực hiện</label>
-                          <input type="date" value={resultForm.executionDate} onChange={(e) => setResultForm({...resultForm, executionDate: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" />
+                          <WheelDateTimePicker mode="date" value={resultForm.executionDate} onChange={(val) => setResultForm({...resultForm, executionDate: val})} />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Nội dung</label>

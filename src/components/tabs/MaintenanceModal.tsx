@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   AlertTriangle,
   Calendar,
@@ -502,11 +503,10 @@ export default function MaintenanceModal({ show, device, onClose }: MaintenanceM
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Ngày dự kiến *</label>
-                        <input
-                          type="datetime-local"
+                        <WheelDateTimePicker
+                          mode="datetime"
                           value={requestForm.expectedDate}
-                          onChange={(e) => setRequestForm({ ...requestForm, expectedDate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                          onChange={(val) => setRequestForm({ ...requestForm, expectedDate: val })}
                         />
                       </div>
                       <div>
@@ -635,11 +635,10 @@ export default function MaintenanceModal({ show, device, onClose }: MaintenanceM
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Ngày bắt đầu</label>
-                  <input
-                    type="date"
+                  <WheelDateTimePicker
+                    mode="date"
                     value={scheduleConfig.startDate}
-                    onChange={(e) => setScheduleConfig({ ...scheduleConfig, startDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                    onChange={(val) => setScheduleConfig({ ...scheduleConfig, startDate: val })}
                   />
                 </div>
                 <div>
@@ -695,20 +694,18 @@ export default function MaintenanceModal({ show, device, onClose }: MaintenanceM
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Ngày thực tế *</label>
-                  <input
-                    type="date"
+                  <WheelDateTimePicker
+                    mode="date"
                     value={resultForm.executionDate}
-                    onChange={(e) => setResultForm({ ...resultForm, executionDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                    onChange={(val) => setResultForm({ ...resultForm, executionDate: val })}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Ngày bảo dưỡng kế tiếp</label>
-                  <input
-                    type="date"
+                  <WheelDateTimePicker
+                    mode="date"
                     value={resultForm.nextDueDate}
-                    onChange={(e) => setResultForm({ ...resultForm, nextDueDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                    onChange={(val) => setResultForm({ ...resultForm, nextDueDate: val })}
                   />
                 </div>
                 <div>

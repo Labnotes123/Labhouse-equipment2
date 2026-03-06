@@ -1,4 +1,5 @@
 import { Device, AttachedFile } from "@/lib/mockData";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import type { ReturnAcceptanceFormState } from "./DeviceProfileTab";
 import { X, ClipboardCheck, Microscope, Upload, Eye, Download, Trash2, Save, CheckCircle2, FileText, User, MapPin, Tag, Hash, NotebookText } from "lucide-react";
 
@@ -139,12 +140,10 @@ export function ReturnAcceptanceFormModal({
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 font-bold">Thời gian tiếp nhận</label>
-                  <input
-                    type="datetime-local"
+                  <WheelDateTimePicker
+                    mode="datetime"
                     value={form.receivedAt}
-                    onChange={(event) => onUpdate((prev) => ({ ...prev, receivedAt: event.target.value }))}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-                    disabled={!canEdit}
+                    onChange={(val) => onUpdate((prev) => ({ ...prev, receivedAt: val }))}
                   />
                 </div>
                 <div>

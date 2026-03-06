@@ -11,6 +11,7 @@ import {
   ChevronsRight,
   GripVertical,
 } from "lucide-react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 
 export interface Column<T> {
   key: keyof T | string;
@@ -439,36 +440,36 @@ export function SmartTable<T>({
                     {col.filterable !== false && (
                       col.dateFilter ? (
                         <div className="flex items-center gap-1">
-                          <input
-                            type="date"
+                          <WheelDateTimePicker
+                            mode="date"
                             value={dateRange[String(col.key)]?.start || ""}
-                            onChange={(e) =>
+                            onChange={(val) =>
                               setDateRange((prev) => ({
                                 ...prev,
                                 [String(col.key)]: {
                                   ...prev[String(col.key)],
-                                  start: e.target.value,
+                                  start: val,
                                 },
                               }))
                             }
-                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
                             placeholder="Từ ngày"
+                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded flex items-center gap-1 bg-white"
                           />
                           <span className="text-slate-400">-</span>
-                          <input
-                            type="date"
+                          <WheelDateTimePicker
+                            mode="date"
                             value={dateRange[String(col.key)]?.end || ""}
-                            onChange={(e) =>
+                            onChange={(val) =>
                               setDateRange((prev) => ({
                                 ...prev,
                                 [String(col.key)]: {
                                   ...prev[String(col.key)],
-                                  end: e.target.value,
+                                  end: val,
                                 },
                               }))
                             }
-                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
                             placeholder="Đến ngày"
+                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded flex items-center gap-1 bg-white"
                           />
                         </div>
                       ) : (

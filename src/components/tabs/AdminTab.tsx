@@ -42,6 +42,7 @@ import {
   ToggleRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import { useToast } from "@/contexts/ToastContext";
 import { useData } from "@/contexts/DataContext";
 import {
@@ -3911,20 +3912,18 @@ export default function AdminTab() {
               </p>
               <div>
                 <label className="block text-sm font-semibold text-slate-600 mb-1">Từ ngày *</label>
-                <input
-                  type="date"
+                <WheelDateTimePicker
+                  mode="date"
                   value={deleteFromDate}
-                  onChange={(e) => setDeleteFromDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-slate-500"
+                  onChange={(val) => setDeleteFromDate(val)}
                 />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-600 mb-1">Đến ngày *</label>
-                <input
-                  type="date"
+                <WheelDateTimePicker
+                  mode="date"
                   value={deleteToDate}
-                  onChange={(e) => setDeleteToDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-slate-500"
+                  onChange={(val) => setDeleteToDate(val)}
                 />
               </div>
             </div>

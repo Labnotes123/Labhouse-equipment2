@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useId, useEffect } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   Cpu,
   Search,
@@ -2713,14 +2714,13 @@ export default function DeviceProfileTab() {
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 font-bold">Ngày khảo sát (*):</label>
-                    <input
-                      type="date"
+                    <WheelDateTimePicker
+                      mode="date"
                       value={currentNewAcceptanceRecord.installationSurveyForm.surveyDate}
-                      onChange={(event) => updateNewAcceptanceRecord(resolvedNewAcceptanceDevice.id, (base) => ({
+                      onChange={(val) => updateNewAcceptanceRecord(resolvedNewAcceptanceDevice.id, (base) => ({
                         ...base,
-                        installationSurveyForm: { ...base.installationSurveyForm, surveyDate: event.target.value },
+                        installationSurveyForm: { ...base.installationSurveyForm, surveyDate: val },
                       }))}
-                      className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
                     />
                   </div>
                 </div>
@@ -3420,7 +3420,7 @@ export default function DeviceProfileTab() {
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Ngày bắt đầu quản lý <span className="text-red-500">*</span></label>
-                <input type="date" value={newManagerStartDate} onChange={(e) => setNewManagerStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" />
+                <WheelDateTimePicker mode="date" value={newManagerStartDate} onChange={(val) => setNewManagerStartDate(val)} />
               </div>
               
               <div className="flex justify-end gap-3 pt-4 border-t">

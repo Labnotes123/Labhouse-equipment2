@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   X,
   Plus,
@@ -1438,11 +1439,10 @@ export default function TrainingModal({
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Ngày đào tạo *</label>
-                        <input
-                          type="date"
+                        <WheelDateTimePicker
+                          mode="date"
                           value={planForm.trainingDate}
-                          onChange={(e) => setPlanForm({ ...planForm, trainingDate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                          onChange={(val) => setPlanForm({ ...planForm, trainingDate: val })}
                         />
                       </div>
                     </div>
@@ -1450,11 +1450,10 @@ export default function TrainingModal({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Giờ đào tạo</label>
-                        <input
-                          type="time"
+                        <WheelDateTimePicker
+                          mode="time"
                           value={planForm.trainingTime}
-                          onChange={(e) => setPlanForm({ ...planForm, trainingTime: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                          onChange={(val) => setPlanForm({ ...planForm, trainingTime: val })}
                         />
                       </div>
                       <div>

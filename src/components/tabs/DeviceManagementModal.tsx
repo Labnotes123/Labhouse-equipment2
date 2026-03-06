@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   X,
   Printer,
@@ -621,11 +622,10 @@ export default function DeviceManagementModal({
                       <label className="block text-sm font-medium text-slate-700 mb-2">
                         Ngày bắt đầu quản lý <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="date"
+                      <WheelDateTimePicker
+                        mode="date"
                         value={newManagerStartDate}
-                        onChange={(e) => setNewManagerStartDate(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                        onChange={(val) => setNewManagerStartDate(val)}
                       />
                     </div>
 

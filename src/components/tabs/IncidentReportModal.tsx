@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import WheelDateTimePicker from "@/components/WheelDateTimePicker";
 import {
   AlertTriangle,
   Check,
@@ -577,11 +578,10 @@ export default function IncidentReportModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian phát hiện <span className="text-red-500">*</span></label>
-                      <input
-                        type="datetime-local"
+                      <WheelDateTimePicker
+                        mode="datetime"
                         value={incidentForm.incidentDateTime || ""}
-                        onChange={(e) => setIncidentForm({ ...incidentForm, incidentDateTime: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                        onChange={(val) => setIncidentForm({ ...incidentForm, incidentDateTime: val })}
                       />
                     </div>
                     <div>
@@ -723,11 +723,10 @@ export default function IncidentReportModal({
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian hoàn thành</label>
-                            <input
-                              type="datetime-local"
+                            <WheelDateTimePicker
+                              mode="datetime"
                               value={incidentForm.completionDateTime || ""}
-                              onChange={(e) => setIncidentForm({ ...incidentForm, completionDateTime: e.target.value })}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                              onChange={(val) => setIncidentForm({ ...incidentForm, completionDateTime: val })}
                             />
                           </div>
                         </div>
@@ -813,20 +812,18 @@ export default function IncidentReportModal({
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
                                     <label className="block text-xs text-slate-500 mb-1">Thời gian bắt đầu</label>
-                                    <input
-                                      type="datetime-local"
+                                    <WheelDateTimePicker
+                                      mode="datetime"
                                       value={incidentForm.stopFrom || ""}
-                                      onChange={(e) => setIncidentForm({ ...incidentForm, stopFrom: e.target.value })}
-                                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                                      onChange={(val) => setIncidentForm({ ...incidentForm, stopFrom: val })}
                                     />
                                   </div>
                                   <div>
                                     <label className="block text-xs text-slate-500 mb-1">Thời gian kết thúc</label>
-                                    <input
-                                      type="datetime-local"
+                                    <WheelDateTimePicker
+                                      mode="datetime"
                                       value={incidentForm.stopTo || ""}
-                                      onChange={(e) => setIncidentForm({ ...incidentForm, stopTo: e.target.value })}
-                                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                                      onChange={(val) => setIncidentForm({ ...incidentForm, stopTo: val })}
                                     />
                                   </div>
                                 </div>
@@ -1263,11 +1260,10 @@ export default function IncidentReportModal({
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian bắt đầu</label>
-                          <input
-                            type="datetime-local"
+                          <WheelDateTimePicker
+                            mode="datetime"
                             value={workOrderForm.startDateTime || ""}
-                            onChange={(e) => setWorkOrderForm({ ...workOrderForm, startDateTime: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            onChange={(val) => setWorkOrderForm({ ...workOrderForm, startDateTime: val })}
                           />
                         </div>
                       </div>
@@ -1275,11 +1271,10 @@ export default function IncidentReportModal({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Thời gian kết thúc</label>
-                          <input
-                            type="datetime-local"
+                          <WheelDateTimePicker
+                            mode="datetime"
                             value={workOrderForm.endDateTime || ""}
-                            onChange={(e) => setWorkOrderForm({ ...workOrderForm, endDateTime: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            onChange={(val) => setWorkOrderForm({ ...workOrderForm, endDateTime: val })}
                           />
                         </div>
                         <div>

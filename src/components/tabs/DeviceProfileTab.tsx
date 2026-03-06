@@ -423,6 +423,20 @@ export default function DeviceProfileTab() {
   const { devices: contextDevices, addDevice, updateDevice, incidents, schedules, addHistory } = useData();
   const [devices, setDevices] = useState<Device[]>([]);
   useEffect(() => { setDevices(contextDevices); }, [contextDevices]);
+
+  // Listen for bypass event
+  useEffect(() => {
+    const handleOpenIncident = (e: Event) => {
+      const { deviceId } = (e as CustomEvent).detail;
+      const device = devices.find(d => d.id === deviceId);
+      if (device) {
+        setSelectedDeviceForAction(device);
+        setActiveModal("incident");
+      }
+    };
+    window.addEventListener("openIncidentReport", handleOpenIncident);
+    return () => window.removeEventListener("openIncidentReport", handleOpenIncident);
+  }, [devices]);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");

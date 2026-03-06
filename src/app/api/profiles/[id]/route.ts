@@ -16,7 +16,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const body = await req.json();
-    const updatedProfile = updateProfile(id, body);
+    const actorName = req.headers.get("x-actor-name") || "System";
+    const updatedProfile = updateProfile(id, body, actorName);
     if (!updatedProfile) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(updatedProfile);
   } catch (err) {
@@ -27,7 +28,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const removed = deleteProfile(id);
+    const actorName = _req.headers.get("x-actor-name") || "System";
+    const removed = deleteProfile(id, actorName);
     if (!removed) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -230,6 +230,60 @@ export interface HistoryConfig {
   lastAutoDelete?: string;
 }
 
+export interface DataScopePermission {
+  id: string;
+  profileId: string;
+  profileName?: string;
+  branchIds: string[];
+  departmentIds: string[];
+  deviceTypes: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface RoleTemplate {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  profileIds: string[];
+  defaultScope: {
+    branchIds: string[];
+    departmentIds: string[];
+    deviceTypes: string[];
+  };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface SecurityPolicy {
+  minPasswordLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumber: boolean;
+  requireSpecialChar: boolean;
+  passwordExpiryDays: number;
+  sessionTimeoutMinutes: number;
+  maxConcurrentSessions: number;
+  forceLogoutVersion: number;
+  updatedAt?: string;
+}
+
+export interface ConfigAuditLog {
+  id: string;
+  actorName: string;
+  action: "create" | "update" | "delete" | "restore";
+  targetType: "user" | "profile" | "branch" | "supplier" | "history_config" | "scope_permission" | "role_template" | "security_policy";
+  targetId: string;
+  targetName?: string;
+  before?: unknown;
+  after?: unknown;
+  changedFields?: string[];
+  changedAt: string;
+}
+
 // Mock data for the device management system
 
 export type DeviceStatus =
@@ -2176,6 +2230,114 @@ export const mockHistoryConfig: HistoryConfig = {
   autoDeleteEnabled: false,
   deleteAfterDays: 365,
 };
+
+export const mockScopePermissions: DataScopePermission[] = [
+  {
+    id: "scope_1",
+    profileId: "p1",
+    profileName: "Quản trị viên",
+    branchIds: ["b1", "b2"],
+    departmentIds: ["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9"],
+    deviceTypes: [...deviceTypes],
+    isActive: true,
+    createdAt: "2024-01-01T08:00:00",
+  },
+  {
+    id: "scope_2",
+    profileId: "p4",
+    profileName: "Nhân viên",
+    branchIds: ["b1"],
+    departmentIds: ["d1", "d8"],
+    deviceTypes: ["Máy xét nghiệm chính", "Máy thành phần", "Máy ly tâm"],
+    isActive: true,
+    createdAt: "2024-01-03T08:00:00",
+  },
+];
+
+export const mockRoleTemplates: RoleTemplate[] = [
+  {
+    id: "rt_1",
+    code: "TPL-ADMIN",
+    name: "Template Admin",
+    description: "Template đầy đủ quyền quản trị và dữ liệu",
+    profileIds: ["p1"],
+    defaultScope: {
+      branchIds: ["b1", "b2"],
+      departmentIds: ["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9"],
+      deviceTypes: [...deviceTypes],
+    },
+    isActive: true,
+    createdAt: "2024-01-05T08:00:00",
+  },
+  {
+    id: "rt_2",
+    code: "TPL-QA",
+    name: "Template QA",
+    description: "Template cho quản lý chất lượng",
+    profileIds: ["p3", "p4"],
+    defaultScope: {
+      branchIds: ["b1"],
+      departmentIds: ["d7"],
+      deviceTypes: ["Máy xét nghiệm chính", "Tủ An toàn sinh học & Tủ thao tác PCR", "Máy PCR"],
+    },
+    isActive: true,
+    createdAt: "2024-01-06T08:00:00",
+  },
+  {
+    id: "rt_3",
+    code: "TPL-KT",
+    name: "Template Kỹ thuật",
+    description: "Template cho kỹ thuật viên vận hành",
+    profileIds: ["p4"],
+    defaultScope: {
+      branchIds: ["b1"],
+      departmentIds: ["d1", "d8"],
+      deviceTypes: ["Máy xét nghiệm chính", "Máy ly tâm", "Máy vortex & spindown"],
+    },
+    isActive: true,
+    createdAt: "2024-01-07T08:00:00",
+  },
+];
+
+export const mockSecurityPolicy: SecurityPolicy = {
+  minPasswordLength: 10,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumber: true,
+  requireSpecialChar: true,
+  passwordExpiryDays: 90,
+  sessionTimeoutMinutes: 120,
+  maxConcurrentSessions: 2,
+  forceLogoutVersion: 1,
+  updatedAt: "2024-01-08T08:00:00",
+};
+
+export const mockConfigAuditLogs: ConfigAuditLog[] = [
+  {
+    id: "audit_1",
+    actorName: "Nguyễn Văn Admin",
+    action: "update",
+    targetType: "history_config",
+    targetId: "history-config",
+    targetName: "Cấu hình lịch sử",
+    before: { autoDeleteEnabled: false, deleteAfterDays: 365 },
+    after: { autoDeleteEnabled: true, deleteAfterDays: 180 },
+    changedFields: ["autoDeleteEnabled", "deleteAfterDays"],
+    changedAt: "2024-01-10T09:30:00",
+  },
+  {
+    id: "audit_2",
+    actorName: "Nguyễn Văn Admin",
+    action: "update",
+    targetType: "profile",
+    targetId: "p3",
+    targetName: "Trưởng phòng",
+    before: { isActive: true },
+    after: { isActive: false },
+    changedFields: ["isActive"],
+    changedAt: "2024-01-11T10:15:00",
+  },
+];
 
 // ============ MOCK TRANSFER PROPOSALS ============
 

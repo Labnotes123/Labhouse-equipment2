@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteUser, findUser, updateUser } from "@/lib/admin-store";
+import { deleteScopePermission, listScopePermissions, upsertScopePermission } from "@/lib/admin-store";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const user = findUser(id);
-    if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(user);
+    const item = listScopePermissions().find((it) => it.id === id);
+    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(item);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
@@ -17,20 +17,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const body = await req.json();
     const actorName = req.headers.get("x-actor-name") || "System";
-    const updatedUser = updateUser(id, body, actorName);
-    if (!updatedUser) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(updatedUser);
+    const saved = upsertScopePermission({ ...body, id }, actorName);
+    return NextResponse.json(saved);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const actorName = _req.headers.get("x-actor-name") || "System";
-    const removed = deleteUser(id, actorName);
-    if (!removed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const actorName = req.headers.get("x-actor-name") || "System";
+    const ok = deleteScopePermission(id, actorName);
+    if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

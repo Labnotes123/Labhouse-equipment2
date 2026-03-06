@@ -30,11 +30,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tên chi nhánh là bắt buộc" }, { status: 400 });
     }
 
+    const actorName = req.headers.get("x-actor-name") || "System";
     const newBranch = createBranch({
       name: body.name,
       code: body.code,
       isActive: body.isActive,
-    });
+    }, actorName);
     return NextResponse.json(newBranch, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

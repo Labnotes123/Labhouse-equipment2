@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tên profile là bắt buộc" }, { status: 400 });
     }
 
+    const actorName = req.headers.get("x-actor-name") || "System";
     const newProfile = createProfile({
       name: body.name,
       code: body.code,
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       permissions: body.permissions,
       detailedPermissions: body.detailedPermissions,
       isActive: body.isActive,
-    });
+    }, actorName);
     return NextResponse.json(newProfile, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

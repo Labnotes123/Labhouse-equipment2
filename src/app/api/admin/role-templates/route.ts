@@ -1,22 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getHistoryConfig, updateHistoryConfig } from "@/lib/admin-store";
+import { createRoleTemplate, listRoleTemplates } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    return NextResponse.json(getHistoryConfig());
+    return NextResponse.json(listRoleTemplates());
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const actorName = req.headers.get("x-actor-name") || "System";
-    const updated = updateHistoryConfig(body, actorName);
-    return NextResponse.json(updated);
+    if (!body.name) {
+      return NextResponse.json({ error: "name is required" }, { status: 400 });
+    }
+    const created = createRoleTemplate(body, actorName);
+    return NextResponse.json(created, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

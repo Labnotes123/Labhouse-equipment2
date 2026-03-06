@@ -115,3 +115,4 @@ bun build
 | Recent | Database Backup & Restore feature implemented with JSON export/import, auto backup config, backup history, and 2FA-style restore confirmation |
 | Today | Training Module implemented with 3-tab layout, automation for device permissions and status changes |
 | 2026-03-06 | AdminTab popup UX fix: removed transformed `fade-in` wrapper around section content (root cause of fixed-overlay clipping), increased admin modal size to `w-[92vw] max-w-[1800px] h-[88vh]`, and raised overlay layer to `z-[100]` so popups render full viewport and stay visible |
+| 2026-03-06 | Added Advanced Admin features with mock data + APIs: Data Scope Permission (branch/department/device type), Role Templates with quick user assignment, Permission Diff API/UI, Config Audit logs (before/after + actor), and Security Policy (password/session + terminate all sessions) |

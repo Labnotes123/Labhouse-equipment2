@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tên nhà cung cấp là bắt buộc" }, { status: 400 });
     }
 
+    const actorName = req.headers.get("x-actor-name") || "System";
     const newSupplier = createSupplier({
       name: body.name,
       code: body.code,
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       email: body.email,
       contactPerson: body.contactPerson,
       isActive: body.isActive,
-    });
+    }, actorName);
     return NextResponse.json(newSupplier, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

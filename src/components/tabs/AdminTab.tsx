@@ -47,7 +47,9 @@ import { useToast } from "@/contexts/ToastContext";
 import { useData } from "@/contexts/DataContext";
 import {
   mockDevices,
+  deviceTypes,
   mockHistoryConfig,
+  mockSecurityPolicy,
   Profile,
   Permission,
   PermissionCategory,
@@ -58,6 +60,10 @@ import {
   Supplier,
   InstallationLocation,
   DetailedPermission,
+  DataScopePermission,
+  RoleTemplate,
+  SecurityPolicy,
+  ConfigAuditLog,
   DEFAULT_DETAILED_PERMISSIONS,
   PermissionModule,
   DeviceProfileSubModule
@@ -85,7 +91,11 @@ type AdminSection =
   | "countries"
   | "suppliers"
   | "history_config"
-  | "backup";
+  | "backup"
+  | "data_scope"
+  | "role_templates"
+  | "security_policy"
+  | "config_audit";
 
 type UserColumn = "username" | "fullName" | "employeeId" | "phone" | "email" | "position" | "department" | "branch" | "profile" | "status";
 
@@ -99,6 +109,10 @@ const sections: { id: AdminSection; label: string; icon: React.ReactNode; color:
   { id: "countries", label: "Nước sản xuất", icon: <Globe size={20} />, color: "from-green-500 to-emerald-600" },
   { id: "suppliers", label: "Nhà cung cấp", icon: <Truck size={20} />, color: "from-pink-500 to-rose-600" },
   { id: "history_config", label: "Cấu hình lịch sử", icon: <History size={20} />, color: "from-slate-500 to-zinc-600" },
+  { id: "data_scope", label: "Phạm vi dữ liệu", icon: <Filter size={20} />, color: "from-indigo-500 to-blue-600" },
+  { id: "role_templates", label: "Role Template & Diff", icon: <CheckSquare size={20} />, color: "from-violet-500 to-purple-600" },
+  { id: "security_policy", label: "Chính sách bảo mật", icon: <Lock size={20} />, color: "from-red-500 to-rose-600" },
+  { id: "config_audit", label: "Config Audit", icon: <Shield size={20} />, color: "from-amber-500 to-orange-600" },
   { id: "backup", label: "Sao lưu & Khôi phục", icon: <Database size={20} />, color: "from-emerald-500 to-teal-600" },
 ];
 
@@ -410,8 +424,35 @@ export default function AdminTab() {
   // History config state
   const [historyConfig, setHistoryConfig] = useState(mockHistoryConfig);
 
+  // Advanced admin states
+  const [scopePermissions, setScopePermissions] = useState<DataScopePermission[]>([]);
+  const [selectedScopeProfileId, setSelectedScopeProfileId] = useState("");
+  const [scopeBranchIds, setScopeBranchIds] = useState<string[]>([]);
+  const [scopeDepartmentIds, setScopeDepartmentIds] = useState<string[]>([]);
+  const [scopeDeviceTypes, setScopeDeviceTypes] = useState<string[]>([]);
+
+  const [roleTemplates, setRoleTemplates] = useState<RoleTemplate[]>([]);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateDescription, setNewTemplateDescription] = useState("");
+  const [newTemplateProfileIds, setNewTemplateProfileIds] = useState<string[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [selectedTemplateUserId, setSelectedTemplateUserId] = useState("");
+
+  const [diffLeftProfileId, setDiffLeftProfileId] = useState("");
+  const [diffRightProfileId, setDiffRightProfileId] = useState("");
+  const [permissionDiffRows, setPermissionDiffRows] = useState<Array<{ permissionId: string; permissionName: string; module: string; leftEnabled: boolean; rightEnabled: boolean }>>([]);
+
+  const [securityPolicy, setSecurityPolicy] = useState<SecurityPolicy>(mockSecurityPolicy);
+  const [configAuditLogs, setConfigAuditLogs] = useState<ConfigAuditLog[]>([]);
+
   // Get addHistory from DataContext (before canAccess check)
   const { addHistory } = useData();
+  const actorName = user?.fullName || user?.username || "System";
+
+  const actorHeaders = useCallback(() => ({
+    "Content-Type": "application/json",
+    "x-actor-name": actorName,
+  }), [actorName]);
 
   const canAccess = user?.role === "Admin" || user?.role === "Giám đốc";
 
@@ -527,6 +568,54 @@ export default function AdminTab() {
     }
   }, []);
 
+  const fetchScopePermissions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/scope-permissions");
+      if (res.ok) {
+        const data = await res.json() as DataScopePermission[];
+        setScopePermissions(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch scope permissions", e);
+    }
+  }, []);
+
+  const fetchRoleTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/role-templates");
+      if (res.ok) {
+        const data = await res.json() as RoleTemplate[];
+        setRoleTemplates(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch role templates", e);
+    }
+  }, []);
+
+  const fetchSecurityPolicy = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/security-policy");
+      if (res.ok) {
+        const data = await res.json() as SecurityPolicy;
+        setSecurityPolicy(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch security policy", e);
+    }
+  }, []);
+
+  const fetchConfigAudits = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/config-audit?limit=200");
+      if (res.ok) {
+        const data = await res.json() as ConfigAuditLog[];
+        setConfigAuditLogs(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch config audits", e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
     fetchProfiles();
@@ -537,7 +626,11 @@ export default function AdminTab() {
     fetchDepartments();
     fetchCountries();
     fetchHistoryConfig();
-  }, [fetchUsers, fetchProfiles, fetchBranches, fetchPositions, fetchInstallLocations, fetchSuppliers, fetchDepartments, fetchCountries, fetchHistoryConfig]);
+    fetchScopePermissions();
+    fetchRoleTemplates();
+    fetchSecurityPolicy();
+    fetchConfigAudits();
+  }, [fetchUsers, fetchProfiles, fetchBranches, fetchPositions, fetchInstallLocations, fetchSuppliers, fetchDepartments, fetchCountries, fetchHistoryConfig, fetchScopePermissions, fetchRoleTemplates, fetchSecurityPolicy, fetchConfigAudits]);
 
   if (!canAccess) {
     return (
@@ -617,7 +710,7 @@ export default function AdminTab() {
         // Update existing user
         const res = await fetch(`/api/users/${editingUser.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: actorHeaders(),
           body: JSON.stringify(editingUser),
         });
         if (!res.ok) {
@@ -648,7 +741,7 @@ export default function AdminTab() {
         // Create new user
         const res = await fetch("/api/users", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: actorHeaders(),
           body: JSON.stringify(editingUser),
         });
         if (!res.ok) {
@@ -686,7 +779,7 @@ export default function AdminTab() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      const res = await fetch(`/api/users/${userId}`, { method: "DELETE", headers: actorHeaders() });
       if (!res.ok) {
         const err = await res.json() as { error?: string };
         error("Lỗi", err.error ?? "Không thể xóa người dùng");
@@ -737,7 +830,7 @@ export default function AdminTab() {
           // Update existing profile
           const res = await fetch(`/api/profiles/${editingProfile.id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingProfile.name,
               description: editingProfile.description,
@@ -768,7 +861,7 @@ export default function AdminTab() {
           // Create new profile
           const res = await fetch("/api/profiles", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               code: editingProfile.code,
               name: editingProfile.name,
@@ -808,7 +901,7 @@ export default function AdminTab() {
 
   const handleDeleteProfile = async (profileId: string) => {
     try {
-      const res = await fetch(`/api/profiles/${profileId}`, { method: "DELETE" });
+      const res = await fetch(`/api/profiles/${profileId}`, { method: "DELETE", headers: actorHeaders() });
       if (!res.ok) {
         error("Lỗi", "Không thể xóa profile");
         return;
@@ -837,7 +930,7 @@ export default function AdminTab() {
           // Update existing branch
           const res = await fetch(`/api/branches/${editingBranch.id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingBranch.name,
               isActive: editingBranch.isActive,
@@ -851,7 +944,7 @@ export default function AdminTab() {
           // Create new branch
           const res = await fetch("/api/branches", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingBranch.name,
               isActive: editingBranch.isActive ?? true,
@@ -873,7 +966,7 @@ export default function AdminTab() {
 
   const handleDeleteBranch = async (branchId: string) => {
     try {
-      const res = await fetch(`/api/branches/${branchId}`, { method: "DELETE" });
+      const res = await fetch(`/api/branches/${branchId}`, { method: "DELETE", headers: actorHeaders() });
       if (!res.ok) {
         error("Lỗi", "Không thể xóa chi nhánh");
         return;
@@ -892,7 +985,7 @@ export default function AdminTab() {
         if (editingDepartment.id) {
           const res = await fetch(`/api/departments/${editingDepartment.id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify(editingDepartment),
           });
           if (!res.ok) throw new Error("Failed to update department");
@@ -902,7 +995,7 @@ export default function AdminTab() {
         } else {
           const res = await fetch("/api/departments", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify(editingDepartment),
           });
           if (!res.ok) throw new Error("Failed to create department");
@@ -920,7 +1013,7 @@ export default function AdminTab() {
   };
 
   const handleDeleteDepartment = (deptId: string) => {
-    fetch(`/api/departments/${deptId}`, { method: "DELETE" })
+    fetch(`/api/departments/${deptId}`, { method: "DELETE", headers: actorHeaders() })
       .then((res) => {
         if (!res.ok) throw new Error("delete_failed");
         setDepartments(prev => prev.filter(d => d.id !== deptId));
@@ -940,7 +1033,7 @@ export default function AdminTab() {
           // Update existing position
           const res = await fetch(`/api/positions/${editingPosition.id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingPosition.name,
               description: editingPosition.description,
@@ -955,7 +1048,7 @@ export default function AdminTab() {
           // Create new position - code will be auto-generated
           const res = await fetch("/api/positions", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingPosition.name,
               description: editingPosition.description || "",
@@ -978,7 +1071,7 @@ export default function AdminTab() {
 
   const handleDeletePosition = async (positionId: string) => {
     try {
-      const res = await fetch(`/api/positions/${positionId}`, { method: "DELETE" });
+      const res = await fetch(`/api/positions/${positionId}`, { method: "DELETE", headers: actorHeaders() });
       if (!res.ok) {
         error("Lỗi", "Không thể xóa chức vụ");
         return;
@@ -998,7 +1091,7 @@ export default function AdminTab() {
         if (editingInstallLocation.id) {
           const res = await fetch(`/api/installation-locations/${editingInstallLocation.id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingInstallLocation.name,
               departmentId: editingInstallLocation.departmentId,
@@ -1015,7 +1108,7 @@ export default function AdminTab() {
         } else {
           const res = await fetch("/api/installation-locations", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingInstallLocation.name,
               departmentId: editingInstallLocation.departmentId,
@@ -1041,7 +1134,7 @@ export default function AdminTab() {
 
   const handleDeleteInstallLocation = async (locationId: string) => {
     try {
-      const res = await fetch(`/api/installation-locations/${locationId}`, { method: "DELETE" });
+      const res = await fetch(`/api/installation-locations/${locationId}`, { method: "DELETE", headers: actorHeaders() });
       if (!res.ok) {
         error("Lỗi", "Không thể xóa vị trí lắp đặt");
         return;
@@ -1059,7 +1152,7 @@ export default function AdminTab() {
     if (!newCountry.trim()) return;
     fetch("/api/countries", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: actorHeaders(),
       body: JSON.stringify({ name: newCountry.trim() }),
     })
       .then(async (res) => {
@@ -1080,7 +1173,7 @@ export default function AdminTab() {
     if (!target) return;
     fetch("/api/countries", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      headers: actorHeaders(),
       body: JSON.stringify({ name: target }),
     })
       .then(async (res) => {
@@ -1111,7 +1204,7 @@ export default function AdminTab() {
           // Update existing supplier
           const res = await fetch(`/api/suppliers/${editingSupplier.id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingSupplier.name,
               address: editingSupplier.address,
@@ -1129,7 +1222,7 @@ export default function AdminTab() {
           // Create new supplier - code will be auto-generated
           const res = await fetch("/api/suppliers", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: actorHeaders(),
             body: JSON.stringify({
               name: editingSupplier.name,
               address: editingSupplier.address || "",
@@ -1155,7 +1248,7 @@ export default function AdminTab() {
 
   const handleDeleteSupplier = async (supplierId: string) => {
     try {
-      const res = await fetch(`/api/suppliers/${supplierId}`, { method: "DELETE" });
+      const res = await fetch(`/api/suppliers/${supplierId}`, { method: "DELETE", headers: actorHeaders() });
       if (!res.ok) {
         error("Lỗi", "Không thể xóa nhà cung cấp");
         return;
@@ -1173,7 +1266,7 @@ export default function AdminTab() {
     try {
       const res = await fetch("/api/history-config", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: actorHeaders(),
         body: JSON.stringify(historyConfig),
       });
       if (!res.ok) throw new Error("Failed to save history config");
@@ -1185,6 +1278,183 @@ export default function AdminTab() {
       error("Lỗi", "Không thể lưu cấu hình lịch sử");
     }
   };
+
+  const toggleArraySelection = (items: string[], value: string): string[] => {
+    if (items.includes(value)) return items.filter((it) => it !== value);
+    return [...items, value];
+  };
+
+  const handleSaveScopePermission = async () => {
+    if (!selectedScopeProfileId) {
+      error("Lỗi", "Vui lòng chọn profile để cấu hình phạm vi dữ liệu");
+      return;
+    }
+    try {
+      const existing = scopePermissions.find((it) => it.profileId === selectedScopeProfileId);
+      const res = await fetch(existing ? `/api/admin/scope-permissions/${existing.id}` : "/api/admin/scope-permissions", {
+        method: existing ? "PUT" : "POST",
+        headers: actorHeaders(),
+        body: JSON.stringify({
+          profileId: selectedScopeProfileId,
+          branchIds: scopeBranchIds,
+          departmentIds: scopeDepartmentIds,
+          deviceTypes: scopeDeviceTypes,
+          isActive: true,
+        }),
+      });
+      if (!res.ok) throw new Error("save_scope_failed");
+      await fetchScopePermissions();
+      await fetchConfigAudits();
+      success("Đã lưu", "Phạm vi dữ liệu của profile đã được cập nhật");
+    } catch (e) {
+      console.error("Save scope error", e);
+      error("Lỗi", "Không thể lưu phạm vi dữ liệu");
+    }
+  };
+
+  const handleCreateRoleTemplate = async () => {
+    if (!newTemplateName.trim()) {
+      error("Lỗi", "Vui lòng nhập tên role template");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/role-templates", {
+        method: "POST",
+        headers: actorHeaders(),
+        body: JSON.stringify({
+          name: newTemplateName.trim(),
+          description: newTemplateDescription.trim(),
+          profileIds: newTemplateProfileIds,
+          defaultScope: {
+            branchIds: scopeBranchIds,
+            departmentIds: scopeDepartmentIds,
+            deviceTypes: scopeDeviceTypes,
+          },
+          isActive: true,
+        }),
+      });
+      if (!res.ok) throw new Error("create_template_failed");
+      setNewTemplateName("");
+      setNewTemplateDescription("");
+      setNewTemplateProfileIds([]);
+      await fetchRoleTemplates();
+      await fetchConfigAudits();
+      success("Đã tạo", "Role template mới đã được tạo");
+    } catch (e) {
+      console.error("Create role template error", e);
+      error("Lỗi", "Không thể tạo role template");
+    }
+  };
+
+  const handleApplyRoleTemplateToUser = async () => {
+    if (!selectedTemplateId || !selectedTemplateUserId) {
+      error("Lỗi", "Vui lòng chọn template và người dùng");
+      return;
+    }
+    const template = roleTemplates.find((it) => it.id === selectedTemplateId);
+    const targetUser = users.find((it) => it.id === selectedTemplateUserId);
+    if (!template || !targetUser) {
+      error("Lỗi", "Template hoặc người dùng không hợp lệ");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users/${targetUser.id}`, {
+        method: "PUT",
+        headers: actorHeaders(),
+        body: JSON.stringify({
+          profileIds: template.profileIds,
+        }),
+      });
+      if (!res.ok) throw new Error("apply_template_failed");
+
+      for (const profileId of template.profileIds) {
+        await fetch("/api/admin/scope-permissions", {
+          method: "POST",
+          headers: actorHeaders(),
+          body: JSON.stringify({
+            profileId,
+            branchIds: template.defaultScope.branchIds,
+            departmentIds: template.defaultScope.departmentIds,
+            deviceTypes: template.defaultScope.deviceTypes,
+            isActive: true,
+          }),
+        });
+      }
+
+      await fetchUsers();
+      await fetchScopePermissions();
+      await fetchConfigAudits();
+      success("Đã áp dụng", `Đã áp dụng template cho ${targetUser.fullName}`);
+    } catch (e) {
+      console.error("Apply template error", e);
+      error("Lỗi", "Không thể áp dụng role template");
+    }
+  };
+
+  const handleComparePermissions = async () => {
+    if (!diffLeftProfileId || !diffRightProfileId) {
+      error("Lỗi", "Vui lòng chọn đủ 2 profile để so sánh");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/permission-diff?leftProfileId=${encodeURIComponent(diffLeftProfileId)}&rightProfileId=${encodeURIComponent(diffRightProfileId)}`);
+      if (!res.ok) throw new Error("compare_failed");
+      const data = await res.json() as { diffs?: Array<{ permissionId: string; permissionName: string; module: string; leftEnabled: boolean; rightEnabled: boolean }> };
+      setPermissionDiffRows(data.diffs || []);
+      info("Kết quả", `Tìm thấy ${data.diffs?.length || 0} khác biệt quyền`);
+    } catch (e) {
+      console.error("Compare permissions error", e);
+      error("Lỗi", "Không thể so sánh quyền");
+    }
+  };
+
+  const handleSaveSecurityPolicy = async () => {
+    try {
+      const res = await fetch("/api/admin/security-policy", {
+        method: "PUT",
+        headers: actorHeaders(),
+        body: JSON.stringify(securityPolicy),
+      });
+      if (!res.ok) throw new Error("save_policy_failed");
+      const data = await res.json() as SecurityPolicy;
+      setSecurityPolicy(data);
+      await fetchConfigAudits();
+      success("Đã lưu", "Chính sách mật khẩu và phiên đăng nhập đã được cập nhật");
+    } catch (e) {
+      console.error("Save security policy error", e);
+      error("Lỗi", "Không thể lưu chính sách bảo mật");
+    }
+  };
+
+  const handleTerminateAllSessions = async () => {
+    try {
+      const res = await fetch("/api/admin/security-policy/terminate-sessions", {
+        method: "POST",
+        headers: actorHeaders(),
+      });
+      if (!res.ok) throw new Error("terminate_failed");
+      await fetchSecurityPolicy();
+      await fetchConfigAudits();
+      success("Đã thực hiện", "Đã tăng phiên bản đăng xuất toàn bộ thiết bị");
+    } catch (e) {
+      console.error("Terminate sessions error", e);
+      error("Lỗi", "Không thể đăng xuất khỏi toàn bộ thiết bị");
+    }
+  };
+
+  useEffect(() => {
+    const currentScope = scopePermissions.find((it) => it.profileId === selectedScopeProfileId);
+    if (!selectedScopeProfileId || !currentScope) {
+      setScopeBranchIds([]);
+      setScopeDepartmentIds([]);
+      setScopeDeviceTypes([]);
+      return;
+    }
+    setScopeBranchIds(currentScope.branchIds || []);
+    setScopeDepartmentIds(currentScope.departmentIds || []);
+    setScopeDeviceTypes(currentScope.deviceTypes || []);
+  }, [selectedScopeProfileId, scopePermissions]);
 
   // ============ RENDER SECTIONS ============
   const renderUsersSection = () => (
@@ -3960,6 +4230,367 @@ export default function AdminTab() {
     </div>
   );
 
+  const renderDataScopeSection = () => (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+          <Filter size={18} className="text-indigo-600" />
+          Phân quyền theo phạm vi dữ liệu
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-600 mb-1">Profile</label>
+            <select
+              value={selectedScopeProfileId}
+              onChange={(e) => setSelectedScopeProfileId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            >
+              <option value="">-- Chọn Profile --</option>
+              {profiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>{profile.code} - {profile.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="border border-slate-200 rounded-xl p-4">
+            <h4 className="font-semibold text-slate-700 mb-3">Chi nhánh</h4>
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {branches.map((branch) => (
+                <label key={branch.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={scopeBranchIds.includes(branch.id)}
+                    onChange={() => setScopeBranchIds((prev) => toggleArraySelection(prev, branch.id))}
+                  />
+                  {branch.code} - {branch.name}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-slate-200 rounded-xl p-4">
+            <h4 className="font-semibold text-slate-700 mb-3">Khoa phòng</h4>
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {departments.map((dept) => (
+                <label key={dept.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={scopeDepartmentIds.includes(dept.id)}
+                    onChange={() => setScopeDepartmentIds((prev) => toggleArraySelection(prev, dept.id))}
+                  />
+                  {dept.code} - {dept.name}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-slate-200 rounded-xl p-4">
+            <h4 className="font-semibold text-slate-700 mb-3">Loại thiết bị</h4>
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {deviceTypes.map((group) => (
+                <label key={group} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={scopeDeviceTypes.includes(group)}
+                    onChange={() => setScopeDeviceTypes((prev) => toggleArraySelection(prev, group))}
+                  />
+                  {group}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleSaveScopePermission}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm"
+            style={{ background: "linear-gradient(135deg, #4f46e5, #2563eb)" }}
+          >
+            <Save size={16} />
+            Lưu phạm vi dữ liệu
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h4 className="font-bold text-slate-800 mb-3">Danh sách cấu hình phạm vi</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="text-left px-3 py-2">Profile</th>
+                <th className="text-left px-3 py-2">Chi nhánh</th>
+                <th className="text-left px-3 py-2">Khoa phòng</th>
+                <th className="text-left px-3 py-2">Loại thiết bị</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scopePermissions.map((item) => (
+                <tr key={item.id} className="border-t border-slate-100 align-top">
+                  <td className="px-3 py-2">{item.profileName || item.profileId}</td>
+                  <td className="px-3 py-2">{item.branchIds.length}</td>
+                  <td className="px-3 py-2">{item.departmentIds.length}</td>
+                  <td className="px-3 py-2">{item.deviceTypes.length}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRoleTemplatesSection = () => (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+          <CheckSquare size={18} className="text-violet-600" />
+          Role Template
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <input
+            type="text"
+            value={newTemplateName}
+            onChange={(e) => setNewTemplateName(e.target.value)}
+            placeholder="Tên template"
+            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+          />
+          <input
+            type="text"
+            value={newTemplateDescription}
+            onChange={(e) => setNewTemplateDescription(e.target.value)}
+            placeholder="Mô tả"
+            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+          />
+          <button
+            onClick={handleCreateRoleTemplate}
+            className="px-4 py-2.5 rounded-xl text-white font-semibold text-sm"
+            style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+          >
+            Tạo Template
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="border border-slate-200 rounded-xl p-4">
+            <h4 className="font-semibold text-slate-700 mb-2">Profile áp dụng</h4>
+            <div className="space-y-2 max-h-44 overflow-y-auto">
+              {profiles.map((profile) => (
+                <label key={profile.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={newTemplateProfileIds.includes(profile.id)}
+                    onChange={() => setNewTemplateProfileIds((prev) => toggleArraySelection(prev, profile.id))}
+                  />
+                  {profile.code} - {profile.name}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-slate-200 rounded-xl p-4">
+            <h4 className="font-semibold text-slate-700 mb-2">Áp dụng nhanh cho user mới</h4>
+            <div className="space-y-3">
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+              >
+                <option value="">-- Chọn template --</option>
+                {roleTemplates.map((it) => (
+                  <option key={it.id} value={it.id}>{it.code} - {it.name}</option>
+                ))}
+              </select>
+              <select
+                value={selectedTemplateUserId}
+                onChange={(e) => setSelectedTemplateUserId(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+              >
+                <option value="">-- Chọn người dùng --</option>
+                {users.map((it) => (
+                  <option key={it.id} value={it.id}>{it.fullName} ({it.username})</option>
+                ))}
+              </select>
+              <button
+                onClick={handleApplyRoleTemplateToUser}
+                className="w-full px-4 py-2.5 rounded-xl text-white font-semibold text-sm"
+                style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}
+              >
+                Áp dụng template
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="text-left px-3 py-2">Mã</th>
+                <th className="text-left px-3 py-2">Tên template</th>
+                <th className="text-left px-3 py-2">Số profile</th>
+                <th className="text-left px-3 py-2">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roleTemplates.map((it) => (
+                <tr key={it.id} className="border-t border-slate-100">
+                  <td className="px-3 py-2">{it.code}</td>
+                  <td className="px-3 py-2">{it.name}</td>
+                  <td className="px-3 py-2">{it.profileIds.length}</td>
+                  <td className="px-3 py-2">{it.isActive ? "Hoạt động" : "Không hoạt động"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h3 className="font-bold text-slate-800 mb-4">So sánh quyền (Permission Diff)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <select
+            value={diffLeftProfileId}
+            onChange={(e) => setDiffLeftProfileId(e.target.value)}
+            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+          >
+            <option value="">Profile trái</option>
+            {profiles.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
+          </select>
+          <select
+            value={diffRightProfileId}
+            onChange={(e) => setDiffRightProfileId(e.target.value)}
+            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+          >
+            <option value="">Profile phải</option>
+            {profiles.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
+          </select>
+          <button
+            onClick={handleComparePermissions}
+            className="px-4 py-2.5 rounded-xl text-white font-semibold text-sm"
+            style={{ background: "linear-gradient(135deg, #4f46e5, #4338ca)" }}
+          >
+            So sánh
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="text-left px-3 py-2">Permission</th>
+                <th className="text-left px-3 py-2">Module</th>
+                <th className="text-left px-3 py-2">Trái</th>
+                <th className="text-left px-3 py-2">Phải</th>
+              </tr>
+            </thead>
+            <tbody>
+              {permissionDiffRows.map((row) => (
+                <tr key={row.permissionId} className="border-t border-slate-100">
+                  <td className="px-3 py-2">{row.permissionName}</td>
+                  <td className="px-3 py-2">{row.module}</td>
+                  <td className="px-3 py-2">{row.leftEnabled ? "Cho phép" : "Không"}</td>
+                  <td className="px-3 py-2">{row.rightEnabled ? "Cho phép" : "Không"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSecurityPolicySection = () => (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+          <Lock size={18} className="text-rose-600" />
+          Chính sách mật khẩu và phiên đăng nhập
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-600 mb-1">Độ dài tối thiểu</label>
+            <input type="number" min={6} value={securityPolicy.minPasswordLength} onChange={(e) => setSecurityPolicy({ ...securityPolicy, minPasswordLength: Number(e.target.value) || 8 })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-600 mb-1">Hết hạn mật khẩu (ngày)</label>
+            <input type="number" min={30} value={securityPolicy.passwordExpiryDays} onChange={(e) => setSecurityPolicy({ ...securityPolicy, passwordExpiryDays: Number(e.target.value) || 90 })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-600 mb-1">Session timeout (phút)</label>
+            <input type="number" min={5} value={securityPolicy.sessionTimeoutMinutes} onChange={(e) => setSecurityPolicy({ ...securityPolicy, sessionTimeoutMinutes: Number(e.target.value) || 120 })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-600 mb-1">Số phiên tối đa</label>
+            <input type="number" min={1} value={securityPolicy.maxConcurrentSessions} onChange={(e) => setSecurityPolicy({ ...securityPolicy, maxConcurrentSessions: Number(e.target.value) || 1 })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={securityPolicy.requireUppercase} onChange={(e) => setSecurityPolicy({ ...securityPolicy, requireUppercase: e.target.checked })} />Bắt buộc chữ hoa</label>
+          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={securityPolicy.requireLowercase} onChange={(e) => setSecurityPolicy({ ...securityPolicy, requireLowercase: e.target.checked })} />Bắt buộc chữ thường</label>
+          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={securityPolicy.requireNumber} onChange={(e) => setSecurityPolicy({ ...securityPolicy, requireNumber: e.target.checked })} />Bắt buộc số</label>
+          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={securityPolicy.requireSpecialChar} onChange={(e) => setSecurityPolicy({ ...securityPolicy, requireSpecialChar: e.target.checked })} />Bắt buộc ký tự đặc biệt</label>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button onClick={handleSaveSecurityPolicy} className="px-5 py-2.5 rounded-xl text-white font-semibold text-sm" style={{ background: "linear-gradient(135deg, #dc2626, #e11d48)" }}>
+            Lưu chính sách
+          </button>
+          <button onClick={handleTerminateAllSessions} className="px-5 py-2.5 rounded-xl border border-rose-200 text-rose-700 font-semibold text-sm hover:bg-rose-50">
+            Đăng xuất khỏi tất cả thiết bị
+          </button>
+          <span className="text-sm text-slate-500 self-center">Phiên bản cưỡng bức đăng xuất: {securityPolicy.forceLogoutVersion}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderConfigAuditSection = () => (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <Shield size={18} className="text-amber-600" />
+            Nhật ký thay đổi cấu hình
+          </h3>
+          <button onClick={fetchConfigAudits} className="px-4 py-2 rounded-xl text-sm border border-slate-200 hover:bg-slate-50">Làm mới</button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="text-left px-3 py-2">Thời gian</th>
+                <th className="text-left px-3 py-2">Người thay đổi</th>
+                <th className="text-left px-3 py-2">Đối tượng</th>
+                <th className="text-left px-3 py-2">Hành động</th>
+                <th className="text-left px-3 py-2">Trường đổi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {configAuditLogs.map((row) => (
+                <tr key={row.id} className="border-t border-slate-100 align-top">
+                  <td className="px-3 py-2">{new Date(row.changedAt).toLocaleString("vi-VN")}</td>
+                  <td className="px-3 py-2">{row.actorName}</td>
+                  <td className="px-3 py-2">{row.targetType} {row.targetName ? `(${row.targetName})` : ""}</td>
+                  <td className="px-3 py-2">{row.action}</td>
+                  <td className="px-3 py-2">{row.changedFields?.slice(0, 5).join(", ") || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderSection = () => {
     switch (activeSection) {
       case "users":
@@ -3980,6 +4611,14 @@ export default function AdminTab() {
         return renderSuppliersSection();
       case "history_config":
         return renderHistoryConfigSection();
+      case "data_scope":
+        return renderDataScopeSection();
+      case "role_templates":
+        return renderRoleTemplatesSection();
+      case "security_policy":
+        return renderSecurityPolicySection();
+      case "config_audit":
+        return renderConfigAuditSection();
       case "backup":
         return renderBackupSection();
       default:

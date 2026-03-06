@@ -16,7 +16,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const body = await req.json();
-    const updatedBranch = updateBranch(id, body);
+    const actorName = req.headers.get("x-actor-name") || "System";
+    const updatedBranch = updateBranch(id, body, actorName);
     if (!updatedBranch) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(updatedBranch);
   } catch (err) {
@@ -27,7 +28,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const removed = deleteBranch(id);
+    const actorName = _req.headers.get("x-actor-name") || "System";
+    const removed = deleteBranch(id, actorName);
     if (!removed) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {

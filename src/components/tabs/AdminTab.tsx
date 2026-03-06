@@ -1429,10 +1429,10 @@ export default function AdminTab() {
 
       {/* User Modal */}
       {showUserModal && editingUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl transform transition-all">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-violet-600 to-indigo-600">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -1451,7 +1451,7 @@ export default function AdminTab() {
               </div>
             </div>
             {/* Content */}
-            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto min-h-0">
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-slate-600 mb-1">Tên đăng nhập *</label>
@@ -1817,7 +1817,7 @@ export default function AdminTab() {
               </div>
             </div>
             {/* Footer */}
-            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
               <button
                 onClick={() => { setShowUserModal(false); setEditingUser(null); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
@@ -1960,8 +1960,8 @@ export default function AdminTab() {
 
       {/* Profile Modal */}
       {showProfileModal && editingProfile && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-[95vw] xl:max-w-[1600px] max-h-[90vh] shadow-2xl transform transition-all flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-[95vw] xl:max-w-[1600px] max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
             <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -2466,9 +2466,9 @@ export default function AdminTab() {
 
       {/* Branch Modal */}
       {showBranchModal && editingBranch && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl transform transition-all">
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-green-500 to-emerald-600">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-green-500 to-emerald-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -2517,7 +2517,7 @@ export default function AdminTab() {
                 <label htmlFor="branchActive" className="text-sm text-slate-600">Hoạt động</label>
               </div>
             </div>
-            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
               <button
                 onClick={() => { setShowBranchModal(false); setEditingBranch(null); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
@@ -2618,9 +2618,9 @@ export default function AdminTab() {
 
       {/* Department Modal */}
       {showDepartmentModal && editingDepartment && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl transform transition-all">
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-orange-500 to-amber-600">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-orange-500 to-amber-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -2689,7 +2689,7 @@ export default function AdminTab() {
                 <label htmlFor="deptActive" className="text-sm text-slate-600">Hoạt động</label>
               </div>
             </div>
-            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
               <button
                 onClick={() => { setShowDepartmentModal(false); setEditingDepartment(null); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
@@ -2788,10 +2788,10 @@ export default function AdminTab() {
 
       {/* Position Modal */}
       {showPositionModal && editingPosition && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl transform transition-all">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-cyan-500 to-blue-600">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-cyan-500 to-blue-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -2810,7 +2810,7 @@ export default function AdminTab() {
               </div>
             </div>
             {/* Content */}
-            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto min-h-0">
               {editingPosition.id && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-600 mb-1">ID Chức vụ</label>
@@ -2891,7 +2891,7 @@ export default function AdminTab() {
               </div>
             </div>
             {/* Footer */}
-            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
               <button
                 onClick={() => { setShowPositionModal(false); setEditingPosition(null); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
@@ -2990,9 +2990,9 @@ export default function AdminTab() {
 
       {/* Install Location Modal */}
       {showInstallLocationModal && editingInstallLocation && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl transform transition-all">
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-teal-500 to-emerald-600">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-teal-500 to-emerald-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -3010,7 +3010,7 @@ export default function AdminTab() {
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto min-h-0">
               {editingInstallLocation.id && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-600 mb-1">ID Vị trí</label>
@@ -3072,7 +3072,7 @@ export default function AdminTab() {
                 <span className="text-sm text-slate-600">Hoạt động</span>
               </div>
             </div>
-            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
               <button
                 onClick={() => { setShowInstallLocationModal(false); setEditingInstallLocation(null); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
@@ -3233,10 +3233,10 @@ export default function AdminTab() {
 
       {/* Supplier Modal */}
       {showSupplierModal && editingSupplier && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl transform transition-all">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
             {/* Header with gradient */}
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-pink-500 to-rose-600">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-pink-500 to-rose-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -3255,7 +3255,7 @@ export default function AdminTab() {
               </div>
             </div>
             {/* Content */}
-            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto min-h-0">
               {editingSupplier.id && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-600 mb-1">ID Nhà cung cấp</label>
@@ -3333,7 +3333,7 @@ export default function AdminTab() {
                 <span className="text-sm text-slate-600 font-medium">Hoạt động</span>
               </div>
             </div>
-            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
               <button
                 onClick={() => { setShowSupplierModal(false); setEditingSupplier(null); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"
@@ -3886,9 +3886,9 @@ export default function AdminTab() {
 
       {/* Delete History Modal */}
       {showDeleteHistoryModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl transform transition-all">
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-slate-500 to-slate-600">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] shadow-2xl transform transition-all my-auto flex flex-col">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-slate-500 to-slate-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -3927,7 +3927,7 @@ export default function AdminTab() {
                 />
               </div>
             </div>
-            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100">
+            <div className="px-6 py-5 bg-slate-50 rounded-b-3xl flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
               <button
                 onClick={() => setShowDeleteHistoryModal(false)}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"

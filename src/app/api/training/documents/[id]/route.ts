@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteAcceptanceRecord, findAcceptanceRecord, updateAcceptanceRecord } from "@/lib/device-ops-store";
-import type { AcceptanceRecord } from "@/lib/device-ops-store";
+import { deleteTrainingDocument, listTrainingDocuments, updateTrainingDocument } from "@/lib/device-ops-store";
 
 export const dynamic = "force-dynamic";
 
@@ -8,23 +7,19 @@ async function resolveId(params: Promise<{ id: string }>) {
   return (await params).id;
 }
 
-function validateAcceptance(body: any) {
-  if (!body?.deviceId) return "deviceId is required";
-  if (!body?.deviceCode) return "deviceCode is required";
-  if (!body?.recordType) return "recordType is required";
-  const allowedTypes: AcceptanceRecord["recordType"][] = ["handover", "return", "transport"];
-  if (body?.recordType && !allowedTypes.includes(body.recordType)) return "invalid recordType";
-  if (body?.recordType === "return" && !body.returnReason) return "returnReason is required for return record";
-  if (body?.recordType === "transport" && !body.transportPartner) return "transportPartner is required for transport record";
+function validateDocument(body: any) {
+  if (!body?.documentName) return "documentName is required";
+  if (!body?.documentType) return "documentType is required";
+  if (!body?.file?.url) return "file.url is required";
   return null;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const id = await resolveId(params);
-    const record = findAcceptanceRecord(id);
-    if (!record) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(record);
+    const doc = listTrainingDocuments().find((d) => d.id === id);
+    if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(doc);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
@@ -33,11 +28,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const body = await req.json();
-    const error = validateAcceptance(body);
+    const error = validateDocument(body);
     if (error) return NextResponse.json({ error }, { status: 400 });
 
     const id = await resolveId(params);
-    const updated = updateAcceptanceRecord(id, { ...body });
+    const updated = updateTrainingDocument(id, body);
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(updated);
   } catch (err) {
@@ -48,7 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const id = await resolveId(params);
-    const deleted = deleteAcceptanceRecord(id);
+    const deleted = deleteTrainingDocument(id);
     if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {

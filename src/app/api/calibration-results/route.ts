@@ -1,34 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockCalibrationResults, CalibrationResult } from "@/lib/mockData";
+import { createCalibrationResult, listCalibrationResults } from "@/lib/device-ops-store";
 
-// In-memory store for calibration results
-let calibrationResultsStore: CalibrationResult[] = [...mockCalibrationResults];
+export const dynamic = "force-dynamic";
 
-// Generate ID for new calibration results
-function generateId(): string {
-  return `ketqua_hc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+function validateCalibrationResult(body: any) {
+  if (!body?.deviceId) return "deviceId is required";
+  return null;
 }
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const deviceId = searchParams.get("deviceId");
-    const requestId = searchParams.get("requestId");
-    const status = searchParams.get("status");
+    const deviceId = searchParams.get("deviceId") || undefined;
+    const requestId = searchParams.get("requestId") || undefined;
+    const status = searchParams.get("status") || undefined;
 
-    let result = [...calibrationResultsStore];
-    if (deviceId) {
-      result = result.filter((r) => r.deviceId === deviceId);
-    }
-    if (requestId) {
-      result = result.filter((r) => r.requestId === requestId);
-    }
-    if (status) {
-      result = result.filter((r) => r.status === status);
-    }
-
-    // Sort by created date descending
-    result.sort((a, b) => {
+    const result = [...listCalibrationResults({ deviceId, requestId, status })].sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
@@ -43,12 +30,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const newResult: CalibrationResult = {
-      ...body,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    calibrationResultsStore = [newResult, ...calibrationResultsStore];
+    const error = validateCalibrationResult(body);
+    if (error) return NextResponse.json({ error }, { status: 400 });
+
+    const newResult = createCalibrationResult({ ...body, createdAt: new Date().toISOString() });
     return NextResponse.json(newResult, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

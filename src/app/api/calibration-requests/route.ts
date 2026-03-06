@@ -1,30 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockCalibrationRequests, CalibrationRequest } from "@/lib/mockData";
+import { createCalibrationRequest, listCalibrationRequests } from "@/lib/device-ops-store";
 
-// In-memory store for calibration requests
-let calibrationRequestsStore: CalibrationRequest[] = [...mockCalibrationRequests];
+export const dynamic = "force-dynamic";
 
-// Generate ID for new calibration requests
-function generateId(): string {
-  return `phc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+function validateCalibrationRequest(body: any) {
+  if (!body?.deviceId) return "deviceId is required";
+  return null;
 }
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const deviceId = searchParams.get("deviceId");
-    const status = searchParams.get("status");
+    const deviceId = searchParams.get("deviceId") || undefined;
+    const status = searchParams.get("status") || undefined;
 
-    let result = [...calibrationRequestsStore];
-    if (deviceId) {
-      result = result.filter((r) => r.deviceId === deviceId);
-    }
-    if (status) {
-      result = result.filter((r) => r.status === status);
-    }
-
-    // Sort by created date descending
-    result.sort((a, b) => {
+    const result = [...listCalibrationRequests({ deviceId, status })].sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
@@ -39,12 +29,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const newRequest: CalibrationRequest = {
-      ...body,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    calibrationRequestsStore = [newRequest, ...calibrationRequestsStore];
+    const error = validateCalibrationRequest(body);
+    if (error) return NextResponse.json({ error }, { status: 400 });
+
+    const newRequest = createCalibrationRequest({ ...body, createdAt: new Date().toISOString() });
     return NextResponse.json(newRequest, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

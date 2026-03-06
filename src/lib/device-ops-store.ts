@@ -193,7 +193,7 @@ function persist(store: OpsStore) {
 }
 
 function getStore(): OpsStore {
-  const globalAny = globalThis as Record<string, OpsStore | undefined>;
+  const globalAny = globalThis as unknown as Record<string, OpsStore | undefined>;
   if (!globalAny[STORE_KEY]) {
     globalAny[STORE_KEY] = loadFromDisk();
   }
@@ -214,19 +214,33 @@ export function findProposal(id: string): NewDeviceProposal | undefined {
 }
 
 export function createProposal(payload: Partial<NewDeviceProposal>): NewDeviceProposal {
+  const now = new Date().toISOString();
   const proposal: NewDeviceProposal = {
     id: payload.id || makeId("proposal"),
-    code: payload.code || `PDX-${Date.now()}`,
-    title: payload.title || "",
-    requester: payload.requester || "",
+    proposalCode: payload.proposalCode || payload.code || `PDX-${Date.now()}`,
+    necessity: payload.necessity || payload.description || "Đề xuất thiết bị mới",
+    deviceRequirements: payload.deviceRequirements || [],
+    proposedBy: payload.proposedBy || payload.requester || "Hệ thống",
+    proposedById: payload.proposedById || "system",
+    proposedDate: payload.proposedDate || payload.createdDate || now,
+    createdDate: payload.createdDate || now,
+    status: payload.status || "Bản nháp",
+    approvers: payload.approvers || [],
+    approvedBy: payload.approvedBy,
+    approvedDate: payload.approvedDate,
+    rejectedBy: payload.rejectedBy,
+    rejectedDate: payload.rejectedDate,
+    rejectionReason: payload.rejectionReason,
+    registeredToSystem: payload.registeredToSystem ?? false,
     department: payload.department || "",
-    budget: payload.budget || "",
-    status: payload.status || "Nháp",
-    createdDate: payload.createdDate || new Date().toISOString(),
     updatedAt: payload.updatedAt,
-    attachments: payload.attachments || [],
+    title: payload.title,
+    budget: payload.budget,
+    requester: payload.requester,
     description: payload.description,
-  } as NewDeviceProposal;
+    attachments: payload.attachments,
+    code: payload.code,
+  };
 
   const store = getStore();
   store.proposals = [proposal, ...store.proposals];
@@ -356,12 +370,15 @@ export function createSchedule(payload: Partial<CalibrationSchedule>): Calibrati
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
-    type: payload.type || "",
-    scheduledDate: payload.scheduledDate || "",
-    status: payload.status || "",
+    type: payload.type || "Hiệu chuẩn",
+    scheduledDate: payload.scheduledDate || new Date().toISOString(),
+    status: payload.status || "Chờ thực hiện",
+    assignedTo: payload.assignedTo || "",
     createdAt: payload.createdAt || new Date().toISOString(),
-    attachments: payload.attachments || [],
-  } as CalibrationSchedule;
+    updatedAt: payload.updatedAt,
+    notes: payload.notes,
+    attachments: payload.attachments,
+  };
 
   const store = getStore();
   store.schedules = [...store.schedules, schedule];
@@ -377,7 +394,7 @@ export function updateSchedule(id: string, payload: Partial<CalibrationSchedule>
     ...store.schedules[index],
     ...payload,
     updatedAt: new Date().toISOString(),
-  } as CalibrationSchedule;
+  };
   store.schedules[index] = updated;
   persist(store);
   return updated;
@@ -404,20 +421,34 @@ export function findCalibrationRequest(id: string): CalibrationRequest | undefin
 }
 
 export function createCalibrationRequest(payload: Partial<CalibrationRequest>): CalibrationRequest {
+  const now = new Date().toISOString();
   const request: CalibrationRequest = {
     id: payload.id || makeId("phc"),
+    requestCode: payload.requestCode || `PHC-${Date.now()}`,
     deviceId: payload.deviceId || "",
     deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
-    status: payload.status || "Nháp",
-    createdAt: payload.createdAt || new Date().toISOString(),
+    serial: payload.serial || "",
+    quantity: payload.quantity ?? 1,
+    expectedDate: payload.expectedDate || now,
+    content: payload.content || "Yêu cầu hiệu chuẩn thiết bị",
+    notes: payload.notes || "",
     attachments: payload.attachments || [],
-    description: payload.description,
-    requestor: payload.requestor || "",
-    approver: payload.approver,
-    plannedDate: payload.plannedDate,
-    type: payload.type,
-  } as CalibrationRequest;
+    proposedBy: payload.proposedBy || "Hệ thống",
+    proposedById: payload.proposedById || "system",
+    department: payload.department || "",
+    position: payload.position || "",
+    approver: payload.approver || "",
+    relatedUsers: payload.relatedUsers || [],
+    status: payload.status || "Bản nháp",
+    approvedBy: payload.approvedBy,
+    approvedDate: payload.approvedDate,
+    rejectedBy: payload.rejectedBy,
+    rejectedDate: payload.rejectedDate,
+    rejectionReason: payload.rejectionReason,
+    createdAt: payload.createdAt || now,
+    updatedAt: payload.updatedAt,
+  };
 
   const store = getStore();
   store.calibrationRequests = [request, ...store.calibrationRequests];
@@ -461,19 +492,28 @@ export function findCalibrationResult(id: string): CalibrationResult | undefined
 }
 
 export function createCalibrationResult(payload: Partial<CalibrationResult>): CalibrationResult {
+  const now = new Date().toISOString();
   const result: CalibrationResult = {
     id: payload.id || makeId("ketqua_hc"),
+    resultCode: payload.resultCode || `KQHC-${Date.now()}`,
+    requestId: payload.requestId || "",
     deviceId: payload.deviceId || "",
-    deviceCode: payload.deviceCode || "",
     deviceName: payload.deviceName || "",
-    requestId: payload.requestId,
-    status: payload.status || "Nháp",
-    createdAt: payload.createdAt || new Date().toISOString(),
+    deviceCode: payload.deviceCode || "",
+    serial: payload.serial || "",
+    executionDate: payload.executionDate || now,
+    content: payload.content || "Kết quả hiệu chuẩn",
+    executionUnit: payload.executionUnit || "Nội bộ",
+    calibrationResult: payload.calibrationResult || "Đạt",
+    standard: payload.standard || "ISO 15189",
     attachments: payload.attachments || [],
-    description: payload.description,
-    evaluator: payload.evaluator || "",
-    evaluationDate: payload.evaluationDate,
-  } as CalibrationResult;
+    conclusion: payload.conclusion || "Đạt",
+    notes: payload.notes || "",
+    status: payload.status || "Bản nháp",
+    createdBy: payload.createdBy || "system",
+    createdAt: payload.createdAt || now,
+    updatedAt: payload.updatedAt,
+  };
 
   const store = getStore();
   store.calibrationResults = [result, ...store.calibrationResults];
@@ -664,18 +704,27 @@ export function findTrainingPlan(id: string): TrainingPlan | undefined {
 }
 
 export function createTrainingPlan(payload: Partial<TrainingPlan>): TrainingPlan {
+  const now = new Date().toISOString();
   const plan: TrainingPlan = {
     id: payload.id || makeId("train_plan"),
-    code: payload.code || `PDT-${Date.now()}`,
-    title: payload.title || "",
+    planCode: payload.planCode || payload.id || `PDT-${Date.now()}`,
     deviceId: payload.deviceId || "",
-    status: payload.status || "Nháp",
-    trainer: payload.trainer || "",
-    schedule: payload.schedule || "",
-    attachments: payload.attachments || [],
-    createdAt: payload.createdAt || new Date().toISOString(),
+    deviceCode: payload.deviceCode || "",
+    deviceName: payload.deviceName || "",
+    topic: payload.topic || "Đào tạo thiết bị",
+    instructorType: payload.instructorType || "Nội bộ",
+    instructorName: payload.instructorName || "Giảng viên nội bộ",
+    trainingDate: payload.trainingDate || now,
+    trainingTime: payload.trainingTime || "08:00",
+    location: payload.location || "Phòng đào tạo",
+    trainees: payload.trainees || [],
+    approver: payload.approver || "Quản trị",
+    status: payload.status || "Chờ duyệt",
+    notes: payload.notes,
+    createdAt: payload.createdAt || now,
     updatedAt: payload.updatedAt,
-  } as TrainingPlan;
+    createdBy: payload.createdBy || "system",
+  };
   const store = getStore();
   store.trainingPlans = [plan, ...store.trainingPlans];
   persist(store);
@@ -714,10 +763,15 @@ export function createTrainingDocument(payload: Partial<TrainingDocument>): Trai
     id: payload.id || makeId("train_doc"),
     deviceId: payload.deviceId || "",
     documentCode: payload.documentCode || payload.id || makeId("doc_code"),
-    documentName: payload.documentName || payload.title || "",
+    documentName: payload.documentName || "Tài liệu đào tạo",
     documentType: (payload.documentType as TrainingDocument["documentType"]) || (payload as any).type || "Khác",
     description: payload.description || "",
-    file: payload.file || { name: payload.title || "file", url: (payload as any).url || "", type: (payload as any).file?.type || "", size: (payload as any).file?.size || 0 },
+    file: payload.file || {
+      name: payload.documentName || "file",
+      url: (payload as any).url || "",
+      type: (payload as any).file?.type || "",
+      size: (payload as any).file?.size || 0,
+    },
     uploadedBy: payload.uploadedBy || "system",
     uploadedAt: payload.uploadedAt || now,
   } as TrainingDocument;

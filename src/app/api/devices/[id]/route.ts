@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDevices, Device } from "@/lib/mockData";
+import { deleteDevice, findDevice, updateDevice } from "@/lib/device-store";
 
-// In-memory store for devices
-let devicesStore: Device[] = [...mockDevices];
+export const dynamic = "force-dynamic";
+
+async function resolveId(params: Promise<{ id: string }>) {
+  return (await params).id;
+}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const device = devicesStore.find((d) => d.id === id);
+    const id = await resolveId(params);
+    const device = findDevice(id);
     if (!device) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(device);
   } catch (err) {
@@ -17,18 +20,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
     const body = await req.json();
-    const index = devicesStore.findIndex((d) => d.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    
-    const updatedDevice = {
-      ...devicesStore[index],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
-    devicesStore[index] = updatedDevice;
-    return NextResponse.json(updatedDevice);
+    const id = await resolveId(params);
+    const updated = updateDevice(id, body);
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(updated);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
@@ -36,11 +32,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const index = devicesStore.findIndex((d) => d.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    
-    devicesStore = devicesStore.filter((d) => d.id !== id);
+    const id = await resolveId(params);
+    const deleted = deleteDevice(id);
+    if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

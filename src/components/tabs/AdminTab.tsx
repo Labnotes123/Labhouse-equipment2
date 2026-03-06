@@ -39,17 +39,9 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useData } from "@/contexts/DataContext";
-import { 
-  mockUserProfiles, 
-  mockProfiles, 
-  mockBranches, 
-  mockDepartments,
-  mockPositions, 
+import {
   mockDevices,
-  countries,
-  mockSuppliers,
   mockHistoryConfig,
-  departments,
   Profile,
   Permission,
   PermissionCategory,
@@ -153,7 +145,7 @@ export default function AdminTab() {
   const usersPerPage = 20;
 
   // Profile management state
-  const [profiles, setProfiles] = useState<Profile[]>(mockProfiles);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileSearchTerm, setProfileSearchTerm] = useState("");
@@ -370,8 +362,8 @@ export default function AdminTab() {
   };
 
   // Branch/Department state
-  const [branches, setBranches] = useState<Branch[]>(mockBranches);
-  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -379,18 +371,18 @@ export default function AdminTab() {
   const [newBranch, setNewBranch] = useState({ name: "" });
   
   // Position state
-  const [positions, setPositions] = useState<Position[]>(mockPositions);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [showPositionModal, setShowPositionModal] = useState(false);
   const [newPosition, setNewPosition] = useState({ name: "", description: "", departmentId: "" });
 
   // Country state
-  const [countryList, setCountryList] = useState<string[]>(countries);
+  const [countryList, setCountryList] = useState<string[]>([]);
   const [newCountry, setNewCountry] = useState("");
   const [editingCountry, setEditingCountry] = useState<{ index: number; value: string } | null>(null);
 
   // Supplier state
-  const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: "", code: "", address: "", phone: "", email: "", contactPerson: "" });
@@ -422,9 +414,100 @@ export default function AdminTab() {
     }
   }, []);
 
+  const fetchProfiles = useCallback(async () => {
+    try {
+      const res = await fetch("/api/profiles");
+      if (res.ok) {
+        const data = await res.json() as Profile[];
+        setProfiles(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch profiles", e);
+    }
+  }, []);
+
+  const fetchBranches = useCallback(async () => {
+    try {
+      const res = await fetch("/api/branches");
+      if (res.ok) {
+        const data = await res.json() as Branch[];
+        setBranches(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch branches", e);
+    }
+  }, []);
+
+  const fetchPositions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/positions");
+      if (res.ok) {
+        const data = await res.json() as Position[];
+        setPositions(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch positions", e);
+    }
+  }, []);
+
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/suppliers");
+      if (res.ok) {
+        const data = await res.json() as Supplier[];
+        setSuppliers(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch suppliers", e);
+    }
+  }, []);
+
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const res = await fetch("/api/departments");
+      if (res.ok) {
+        const data = await res.json() as Department[];
+        setDepartments(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch departments", e);
+    }
+  }, []);
+
+  const fetchCountries = useCallback(async () => {
+    try {
+      const res = await fetch("/api/countries");
+      if (res.ok) {
+        const data = await res.json() as string[];
+        setCountryList(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch countries", e);
+    }
+  }, []);
+
+  const fetchHistoryConfig = useCallback(async () => {
+    try {
+      const res = await fetch("/api/history-config");
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryConfig(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch history config", e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchProfiles();
+    fetchBranches();
+    fetchPositions();
+    fetchSuppliers();
+    fetchDepartments();
+    fetchCountries();
+    fetchHistoryConfig();
+  }, [fetchUsers, fetchProfiles, fetchBranches, fetchPositions, fetchSuppliers, fetchDepartments, fetchCountries, fetchHistoryConfig]);
 
   if (!canAccess) {
     return (
@@ -693,9 +776,19 @@ export default function AdminTab() {
     setEditingProfile(null);
   };
 
-  const handleDeleteProfile = (profileId: string) => {
-    setProfiles(prev => prev.filter(p => p.id !== profileId));
-    success("Đã xóa", "Profile đã được xóa");
+  const handleDeleteProfile = async (profileId: string) => {
+    try {
+      const res = await fetch(`/api/profiles/${profileId}`, { method: "DELETE" });
+      if (!res.ok) {
+        error("Lỗi", "Không thể xóa profile");
+        return;
+      }
+      setProfiles(prev => prev.filter(p => p.id !== profileId));
+      success("Đã xóa", "Profile đã được xóa");
+    } catch (err) {
+      console.error("Profile delete error", err);
+      error("Lỗi", "Không thể xóa profile");
+    }
   };
 
   const togglePermission = (profile: Profile, permId: string) => {
@@ -748,22 +841,43 @@ export default function AdminTab() {
     setEditingBranch(null);
   };
 
-  const handleDeleteBranch = (branchId: string) => {
-    setBranches(prev => prev.filter(b => b.id !== branchId));
-    success("Đã xóa", "Chi nhánh đã được xóa");
+  const handleDeleteBranch = async (branchId: string) => {
+    try {
+      const res = await fetch(`/api/branches/${branchId}`, { method: "DELETE" });
+      if (!res.ok) {
+        error("Lỗi", "Không thể xóa chi nhánh");
+        return;
+      }
+      setBranches(prev => prev.filter(b => b.id !== branchId));
+      success("Đã xóa", "Chi nhánh đã được xóa");
+    } catch (err) {
+      console.error("Branch delete error", err);
+      error("Lỗi", "Không thể xóa chi nhánh");
+    }
   };
 
   const handleSaveDepartment = async () => {
     if (editingDepartment) {
       try {
         if (editingDepartment.id) {
-          // Update existing department
-          setDepartments(prev => prev.map(d => d.id === editingDepartment.id ? editingDepartment : d));
+          const res = await fetch(`/api/departments/${editingDepartment.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(editingDepartment),
+          });
+          if (!res.ok) throw new Error("Failed to update department");
+          const updated = await res.json();
+          setDepartments(prev => prev.map(d => d.id === editingDepartment.id ? updated : d));
           success("Đã cập nhật", "Khoa phòng đã được cập nhật");
         } else {
-          // Create new department
-          const newDept = { ...editingDepartment, id: `d${Date.now()}`, createdAt: new Date().toISOString() };
-          setDepartments(prev => [...prev, newDept]);
+          const res = await fetch("/api/departments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(editingDepartment),
+          });
+          if (!res.ok) throw new Error("Failed to create department");
+          const created = await res.json();
+          setDepartments(prev => [...prev, created]);
           success("Đã thêm", "Khoa phòng mới đã được thêm");
         }
       } catch (err) {
@@ -776,8 +890,16 @@ export default function AdminTab() {
   };
 
   const handleDeleteDepartment = (deptId: string) => {
-    setDepartments(prev => prev.filter(d => d.id !== deptId));
-    success("Đã xóa", "Khoa phòng đã được xóa");
+    fetch(`/api/departments/${deptId}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) throw new Error("delete_failed");
+        setDepartments(prev => prev.filter(d => d.id !== deptId));
+        success("Đã xóa", "Khoa phòng đã được xóa");
+      })
+      .catch((err) => {
+        console.error("Department delete error", err);
+        error("Lỗi", "Không thể xóa khoa phòng");
+      });
   };
 
   // ============ POSITION MANAGEMENT ============
@@ -824,23 +946,60 @@ export default function AdminTab() {
     setEditingPosition(null);
   };
 
-  const handleDeletePosition = (positionId: string) => {
-    setPositions(prev => prev.filter(p => p.id !== positionId));
-    success("Đã xóa", "Chức vụ đã được xóa");
+  const handleDeletePosition = async (positionId: string) => {
+    try {
+      const res = await fetch(`/api/positions/${positionId}`, { method: "DELETE" });
+      if (!res.ok) {
+        error("Lỗi", "Không thể xóa chức vụ");
+        return;
+      }
+      setPositions(prev => prev.filter(p => p.id !== positionId));
+      success("Đã xóa", "Chức vụ đã được xóa");
+    } catch (err) {
+      console.error("Position delete error", err);
+      error("Lỗi", "Không thể xóa chức vụ");
+    }
   };
 
   // ============ COUNTRY MANAGEMENT ============
   const handleAddCountry = () => {
-    if (newCountry.trim()) {
-      setCountryList(prev => [...prev, newCountry.trim()]);
-      success("Đã thêm", `Nước sản xuất "${newCountry}" đã được thêm`);
-      setNewCountry("");
-    }
+    if (!newCountry.trim()) return;
+    fetch("/api/countries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCountry.trim() }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("add_failed");
+        const data = await res.json();
+        setCountryList(data);
+        success("Đã thêm", `Nước sản xuất "${newCountry}" đã được thêm`);
+        setNewCountry("");
+      })
+      .catch((err) => {
+        console.error("Country add error", err);
+        error("Lỗi", "Không thể thêm nước sản xuất");
+      });
   };
 
   const handleDeleteCountry = (index: number) => {
-    setCountryList(prev => prev.filter((_, i) => i !== index));
-    success("Đã xóa", "Nước sản xuất đã được xóa");
+    const target = countryList[index];
+    if (!target) return;
+    fetch("/api/countries", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: target }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("delete_failed");
+        const data = await res.json();
+        setCountryList(data);
+        success("Đã xóa", "Nước sản xuất đã được xóa");
+      })
+      .catch((err) => {
+        console.error("Country delete error", err);
+        error("Lỗi", "Không thể xóa nước sản xuất");
+      });
   };
 
   // ============ SUPPLIER MANAGEMENT ============
@@ -901,16 +1060,37 @@ export default function AdminTab() {
     setEditingSupplier(null);
   };
 
-  const handleDeleteSupplier = (supplierId: string) => {
-    setSuppliers(prev => prev.filter(s => s.id !== supplierId));
-    success("Đã xóa", "Nhà cung cấp đã được xóa");
+  const handleDeleteSupplier = async (supplierId: string) => {
+    try {
+      const res = await fetch(`/api/suppliers/${supplierId}`, { method: "DELETE" });
+      if (!res.ok) {
+        error("Lỗi", "Không thể xóa nhà cung cấp");
+        return;
+      }
+      setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+      success("Đã xóa", "Nhà cung cấp đã được xóa");
+    } catch (err) {
+      console.error("Supplier delete error", err);
+      error("Lỗi", "Không thể xóa nhà cung cấp");
+    }
   };
 
   // ============ HISTORY CONFIG ============
-  const handleSaveHistoryConfig = () => {
-    // Save to localStorage for persistence
-    localStorage.setItem('history_config', JSON.stringify(historyConfig));
-    success("Đã lưu", "Cấu hình lịch sử đã được lưu");
+  const handleSaveHistoryConfig = async () => {
+    try {
+      const res = await fetch("/api/history-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(historyConfig),
+      });
+      if (!res.ok) throw new Error("Failed to save history config");
+      const data = await res.json();
+      setHistoryConfig(data);
+      success("Đã lưu", "Cấu hình lịch sử đã được lưu");
+    } catch (err) {
+      console.error("History config save error", err);
+      error("Lỗi", "Không thể lưu cấu hình lịch sử");
+    }
   };
 
   // ============ RENDER SECTIONS ============
@@ -1259,7 +1439,7 @@ export default function AdminTab() {
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-purple-500"
                   >
                     <option value="">Chọn khoa phòng</option>
-                    {mockDepartments.filter(d => d.isActive).map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                    {departments.filter(d => d.isActive).map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -2669,10 +2849,6 @@ export default function AdminTab() {
     
     // Get additional data from localStorage
     const getStoredData = () => {
-      const users = JSON.parse(localStorage.getItem('mockUserProfiles') || '[]');
-      const branches = JSON.parse(localStorage.getItem('mockBranches') || '[]');
-      const positions = JSON.parse(localStorage.getItem('mockPositions') || '[]');
-      const suppliers = JSON.parse(localStorage.getItem('mockSuppliers') || '[]');
       return { users, branches, positions, suppliers };
     };
 

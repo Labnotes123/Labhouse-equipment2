@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockPositions, Position } from "@/lib/mockData";
+import { createPosition, listPositions } from "@/lib/admin-store";
 
 export const dynamic = 'force-dynamic';
-
-// In-memory store for positions
-let positionsStore: Position[] = [...mockPositions];
-
-// Generate ID for new positions
-function generateId(): string {
-  return `position_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
 
 export async function GET() {
   try {
     // Sort by created date descending
-    const result = [...positionsStore].sort((a, b) => {
+    const result = [...listPositions()].sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
@@ -42,19 +34,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tên chức vụ là bắt buộc" }, { status: 400 });
     }
 
-    const newPosition: Position = {
-      id: generateId(),
+    const newPosition = createPosition({
       name: body.name,
-      code: body.code || `CV-${Date.now()}`,
-      description: body.description || "",
-      departmentId: body.departmentId || "",
-      departmentName: body.departmentName || "",
-      branchId: body.branchId || "",
-      branchName: body.branchName || "",
-      isActive: body.isActive ?? true,
-      createdAt: new Date().toISOString(),
-    };
-    positionsStore = [newPosition, ...positionsStore];
+      code: body.code,
+      description: body.description,
+      departmentId: body.departmentId,
+      departmentName: body.departmentName,
+      branchId: body.branchId,
+      branchName: body.branchName,
+      isActive: body.isActive,
+    });
     return NextResponse.json(newPosition, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

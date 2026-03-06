@@ -155,6 +155,28 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
 
   const pausedDevices = useMemo(() => devicesFiltered.filter((d) => d.status === "Tạm dừng" || d.status === "Tạm điều chuyển"), [devicesFiltered]);
 
+  const alertItems = useMemo(() => {
+    const scheduleAlerts = overdueSchedules.map((s) => ({
+      title: s.type === "Hiệu chuẩn" ? "Lịch hiệu chuẩn quá hạn" : "Lịch bảo dưỡng quá hạn",
+      badge: s.type || "Lịch",
+      desc: `${s.deviceName} - ${formatDate(s.scheduledDate)}`,
+    }));
+
+    const incidentAlerts = openIncidents.slice(0, 5).map((i) => ({
+      title: `Sự cố ${i.reportCode}`,
+      badge: "Sự cố",
+      desc: i.description || i.deviceName || "Cần xử lý",
+    }));
+
+    const pausedAlerts = pausedDevices.map((d) => ({
+      title: "Thiết bị tạm dừng",
+      badge: "Trạng thái",
+      desc: `${d.code || d.id} - ${d.name}`,
+    }));
+
+    return [...scheduleAlerts, ...incidentAlerts, ...pausedAlerts].slice(0, 15);
+  }, [overdueSchedules, openIncidents, pausedDevices]);
+
   const severityCounts = useMemo(() => {
     return filteredIncidents.reduce(
       (acc, cur) => {
@@ -1298,114 +1320,6 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
                                 <button className="p-1.5 rounded bg-purple-100 hover:bg-purple-200" title="Xem Biên bản">
                                   <ClipboardList size={14} className="text-purple-600" />
                                 </button>
-                                <button className="p-1.5 rounded bg-red-100 hover:bg-red-200" title="Xuất PDF">
-                                  <ArrowUpRight size={14} className="text-red-600" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">
-                          Chưa có công việc kỹ sư nào. Các công việc sẽ xuất hiện khi có sự cố được tạo.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Tab 4: Lịch Đào tạo sắp tới */}
-          {activeTab === 4 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">Kế hoạch đào tạo thiết bị sắp diễn ra</p>
-                <div className="flex gap-2">
-                  <button className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200">
-                    <Settings size={16} className="text-slate-600" />
-                  </button>
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium">
-                    <Download size={14} />
-                    Xuất Excel
-                  </button>
-                </div>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Mã kế hoạch</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Thiết bị</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Chủ đề</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Ngày đào tạo</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Giảng viên</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Địa điểm</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Trạng thái</th>
-                      <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 uppercase">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {trainingPlans.filter(p => p.status === "Đã duyệt" || p.status === "Chờ duyệt").length > 0 ? (
-                      trainingPlans
-                        .filter(p => p.status === "Đã duyệt" || p.status === "Chờ duyệt")
-                        .slice(0, 10)
-                        .map((plan) => (
-                          <tr key={plan.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 text-sm font-medium text-slate-700">{plan.planCode}</td>
-                            <td className="px-4 py-3 text-sm text-slate-700">{plan.deviceName}</td>
-                            <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{plan.topic}</td>
-                            <td className="px-4 py-3 text-sm text-slate-500">{formatDate(plan.trainingDate)}</td>
-                            <td className="px-4 py-3 text-sm text-slate-500">{plan.instructorName}</td>
-                            <td className="px-4 py-3 text-sm text-slate-500">{plan.location}</td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                plan.status === "Đã duyệt" ? "bg-emerald-100 text-emerald-700" :
-                                plan.status === "Chờ duyệt" ? "bg-amber-100 text-amber-700" :
-                                plan.status === "Hoàn thành" ? "bg-blue-100 text-blue-700" :
-                                "bg-slate-100 text-slate-700"
-                              }`}>
-                                {plan.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center justify-center gap-2">
-                                <button className="p-1.5 rounded bg-slate-100 hover:bg-slate-200" title="Xem chi tiết">
-                                  <Eye size={14} className="text-slate-600" />
-                                </button>
-                                <button className="p-1.5 rounded bg-blue-100 hover:bg-blue-200" title="Danh sách học viên">
-                                  <ClipboardList size={14} className="text-blue-600" />
-                                </button>
-                                {plan.status === "Đã duyệt" && (
-                                  <button className="p-1.5 rounded bg-purple-100 hover:bg-purple-200" title="Ghi nhận kết quả">
-                                    <FileText size={14} className="text-purple-600" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                    ) : (
-                      <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">
-                          Chưa có kế hoạch đào tạo nào. Các kế hoạch sẽ xuất hiện khi được tạo từ hồ sơ thiết bị.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
                                 <button className="p-1.5 rounded bg-red-100 hover:bg-red-200" title="Xuất PDF">
                                   <ArrowUpRight size={14} className="text-red-600" />
                                 </button>

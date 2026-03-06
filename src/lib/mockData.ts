@@ -169,6 +169,7 @@ export interface Branch {
   code: string; // Mã chi nhánh do hệ thống tự sinh
   isActive: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Department {
@@ -179,6 +180,7 @@ export interface Department {
   branchName?: string; // Tên chi nhánh (để hiển thị)
   isActive: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Position {
@@ -192,6 +194,7 @@ export interface Position {
   branchName?: string; // Tên chi nhánh (để hiển thị)
   isActive: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Supplier {
@@ -204,6 +207,7 @@ export interface Supplier {
   contactPerson?: string;
   isActive: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface HistoryConfig {
@@ -269,6 +273,13 @@ export interface NewDeviceProposal {
   rejectionReason?: string;
   registeredToSystem?: boolean; // whether device has been registered
   department?: string;
+  updatedAt?: string;
+  title?: string;
+  budget?: string;
+  requester?: string;
+  description?: string;
+  attachments?: AttachedFile[];
+  code?: string;
 }
 
 export interface CalibrationSchedule {
@@ -281,6 +292,9 @@ export interface CalibrationSchedule {
   status: "Chờ thực hiện" | "Đã hoàn thành" | "Quá hạn";
   assignedTo: string;
   notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  attachments?: AttachedFile[];
 }
 
 // Calibration Request - for Tab Yêu cầu Hiệu chuẩn (BM.08)
@@ -347,6 +361,7 @@ export interface IncidentReport {
   deviceName: string;
   deviceCode: string;
   specialty: string; // Bộ phận xét nghiệm
+  severity?: "low" | "medium" | "high" | "critical";
   incidentDateTime: string; // Format: hh:mm dd/mm/yyyy
   discoveredBy: string; // Người phát hiện sự cố
   discoveredByRole: string; // Chức vụ người phát hiện
@@ -354,6 +369,7 @@ export interface IncidentReport {
   description: string; // Mô tả chi tiết sự cố
   immediateAction: string; // Hành động xử trí tức thời
   supplierAction: string; // Hành động khắc phục của nhà cung ứng
+  attachments?: AttachedFile[];
   
   // Required fields before submitting
   affectsPatientResult: boolean;
@@ -371,6 +387,8 @@ export interface IncidentReport {
   reportedBy: string; // Người báo cáo
   deviceManager: string; // Quản lý trang thiết bị
   relatedUsers: string[]; // Người liên quan
+  assigneeId?: string;
+  assigneeName?: string;
   
   // Status
   status: "Nháp" | "Chờ duyệt" | "Đã duyệt" | "Từ chối" | "Hoàn thành" | "Đang khắc phục";

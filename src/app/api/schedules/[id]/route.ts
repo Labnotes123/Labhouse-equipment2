@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockSchedules, CalibrationSchedule } from "@/lib/mockData";
+import { deleteSchedule, findSchedule, updateSchedule } from "@/lib/device-ops-store";
 
-// In-memory store for schedules
-let schedulesStore: CalibrationSchedule[] = [...mockSchedules];
+export const dynamic = "force-dynamic";
+
+async function resolveId(params: Promise<{ id: string }>) {
+  return (await params).id;
+}
+
+function validateSchedule(body: any) {
+  if (!body?.deviceId) return "deviceId is required";
+  if (!body?.scheduledDate) return "scheduledDate is required";
+  return null;
+}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const schedule = schedulesStore.find((s) => s.id === id);
+    const id = await resolveId(params);
+    const schedule = findSchedule(id);
     if (!schedule) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(schedule);
   } catch (err) {
@@ -17,16 +26,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
     const body = await req.json();
-    const index = schedulesStore.findIndex((s) => s.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const error = validateSchedule(body);
+    if (error) return NextResponse.json({ error }, { status: 400 });
 
-    const updatedSchedule = {
-      ...schedulesStore[index],
-      ...body,
-    };
-    schedulesStore[index] = updatedSchedule;
+    const id = await resolveId(params);
+    const updatedSchedule = updateSchedule(id, body);
+    if (!updatedSchedule) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(updatedSchedule);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -35,11 +41,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const index = schedulesStore.findIndex((s) => s.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const id = await resolveId(params);
+    const deleted = deleteSchedule(id);
+    if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    schedulesStore = schedulesStore.filter((s) => s.id !== id);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

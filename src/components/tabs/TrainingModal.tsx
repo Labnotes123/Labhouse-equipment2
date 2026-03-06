@@ -29,11 +29,13 @@ import {
   AlertCircle,
   CheckCircle,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import type { Device, TrainingPlan, TrainingDocument, TrainingResult, TrainingTrainee, UserProfile, AttachedFile } from "@/lib/mockData";
 import { SmartTable, Column } from "@/components/SmartTable";
 import { useToast } from "@/contexts/ToastContext";
 import type { User } from "@/contexts/AuthContext";
+import { useData } from "@/contexts/DataContext";
 
 interface TrainingModalProps {
   show: boolean;
@@ -370,6 +372,15 @@ export default function TrainingModal({
   currentUser,
   addHistory,
 }: TrainingModalProps) {
+  const {
+    addTrainingDocument,
+    updateTrainingDocument,
+    addTrainingResult,
+    updateTrainingResult,
+    updateTrainingPlan,
+    deleteTrainingDocument,
+    deleteTrainingResult,
+  } = useData();
   const [activeTab, setActiveTab] = useState<TrainingTab>("plans");
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
   
@@ -395,6 +406,13 @@ export default function TrainingModal({
     description: "",
     file: null,
   });
+  const [editingDoc, setEditingDoc] = useState<TrainingDocument | null>(null);
+  const [docEditForm, setDocEditForm] = useState<TrainingDocumentForm>({
+    documentName: "",
+    documentType: "User Manual",
+    description: "",
+    file: null,
+  });
   const [showDocViewer, setShowDocViewer] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<TrainingDocument | null>(null);
   
@@ -406,6 +424,15 @@ export default function TrainingModal({
     certificateFile: null,
     notes: "",
   });
+  const [editingResult, setEditingResult] = useState<TrainingResult | null>(null);
+  const [resultEditForm, setResultEditForm] = useState<TrainingResultForm>({
+    attendeeResults: [],
+    attendanceFile: null,
+    certificateFile: null,
+    notes: "",
+  });
+  const [resultEditSelected, setResultEditSelected] = useState<string[]>([]);
+  const [resultEditSearch, setResultEditSearch] = useState("");
   
   // Filter states
   const [planFilter, setPlanFilter] = useState<string>("all");
@@ -553,7 +580,7 @@ export default function TrainingModal({
     });
   };
 
-  const handleUploadDocument = () => {
+  const handleUploadDocument = async () => {
     if (!docForm.documentName || !docForm.file) {
       showToast("error", "Lỗi", "Vui lòng nhập tên tài liệu và tải lên file");
       return;
@@ -571,12 +598,18 @@ export default function TrainingModal({
       uploadedAt: new Date().toISOString(),
     };
 
-    onDocumentsChange([docData, ...trainingDocuments]);
-    setDocForm({ documentName: "", documentType: "User Manual", description: "", file: null });
-    showToast("success", "Thành công", "Đã tải lên tài liệu đào tạo");
+    try {
+      const created = await addTrainingDocument(docData);
+      onDocumentsChange([created, ...trainingDocuments]);
+      setDocForm({ documentName: "", documentType: "User Manual", description: "", file: null });
+      showToast("success", "Thành công", "Đã tải lên tài liệu đào tạo");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể lưu tài liệu";
+      showToast("error", "Lỗi", message);
+    }
   };
 
-  const handleSaveResult = () => {
+  const handleSaveResult = async () => {
     if (!selectedPlanForResult) return;
 
     const hasUngraded = resultForm.attendeeResults.some((a) => !a.result);
@@ -608,50 +641,102 @@ export default function TrainingModal({
       recordedAt: now,
     };
 
-    onResultsChange([resultData, ...trainingResults]);
+    try {
+      const created = await addTrainingResult(resultData);
+      onResultsChange([created, ...trainingResults]);
 
-    // Update plan status
-    const updatedPlan = { ...selectedPlanForResult, status: "Hoàn thành" as const, updatedAt: now };
-    onPlansChange(trainingPlans.map((p) => (p.id === selectedPlanForResult.id ? updatedPlan : p)));
+      // Update plan status persisted + local state
+      const updatedPlan = { ...selectedPlanForResult, status: "Hoàn thành" as const, updatedAt: now };
+      onPlansChange(trainingPlans.map((p) => (p.id === selectedPlanForResult.id ? updatedPlan : p)));
+      await updateTrainingPlan(selectedPlanForResult.id, { status: "Hoàn thành", updatedAt: now });
 
-    // AUTOMATION: Auto-grant device permission to passed trainees
-    const passedTrainees = resultData.attendees.filter((a) => a.result === "Đạt");
-    if (passedTrainees.length > 0) {
-      const currentUsers = device.users || [];
-      const newUsers = [...new Set([...currentUsers, ...passedTrainees.map((t) => t.userId)])];
-      onDeviceUpdate(device.id, { users: newUsers });
-      showToast("success", "Tự động cấp quyền", `${passedTrainees.length} nhân viên đã được cấp quyền sử dụng thiết bị`);
+      // AUTOMATION: Auto-grant device permission to passed trainees
+      const passedTrainees = resultData.attendees.filter((a) => a.result === "Đạt");
+      if (passedTrainees.length > 0) {
+        const currentUsers = device.users || [];
+        const newUsers = [...new Set([...currentUsers, ...passedTrainees.map((t) => t.userId)])];
+        onDeviceUpdate(device.id, { users: newUsers });
+        showToast("success", "Tự động cấp quyền", `${passedTrainees.length} nhân viên đã được cấp quyền sử dụng thiết bị`);
+      }
+
+      // AUTOMATION: Auto-update device status if training completed
+      if (device.status === "Chờ vận hành" && passedTrainees.length > 0) {
+        onDeviceUpdate(device.id, { status: "Đang vận hành" });
+        showToast("success", "Thiết bị sẵn sàng", `${device.name} đã đủ điều kiện và sẵn sàng phục vụ xét nghiệm!`);
+      }
+
+      // Add history log
+      addHistory?.({
+        actionCode: `ACT-${String(Date.now()).slice(-6)}`,
+        actionNumber: Date.now(),
+        userId: currentUser?.id || "",
+        userName: currentUser?.fullName || currentUser?.username || "",
+        userRole: currentUser?.role || "",
+        action: "Ghi nhận kết quả",
+        description: `Ghi nhận kết quả đào tạo ${selectedPlanForResult.planCode}, ${passedTrainees.length} người đạt`,
+        targetType: "Đào tạo",
+        targetId: selectedPlanForResult.id,
+        targetName: selectedPlanForResult.planCode,
+        timestamp: new Date().toISOString(),
+      });
+
+      setSelectedPlanForResult(null);
+      setResultForm({
+        attendeeResults: [],
+        attendanceFile: null,
+        certificateFile: null,
+        notes: "",
+      });
+      showToast("success", "Thành công", "Đã ghi nhận kết quả đào tạo");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể lưu kết quả";
+      showToast("error", "Lỗi", message);
     }
+  };
 
-    // AUTOMATION: Auto-update device status if training completed
-    if (device.status === "Chờ vận hành" && passedTrainees.length > 0) {
-      onDeviceUpdate(device.id, { status: "Đang vận hành" });
-      showToast("success", "Thiết bị sẵn sàng", `${device.name} đã đủ điều kiện và sẵn sàng phục vụ xét nghiệm!`);
+  const handleDeleteDocument = async (doc: TrainingDocument) => {
+    if (!window.confirm(`Xóa tài liệu ${doc.documentName}?`)) return;
+    try {
+      await deleteTrainingDocument(doc.id);
+      onDocumentsChange(trainingDocuments.filter((d) => d.id !== doc.id));
+      showToast("success", "Đã xóa", "Đã xóa tài liệu đào tạo");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể xóa tài liệu";
+      showToast("error", "Lỗi", message);
     }
+  };
 
-    // Add history log
-    addHistory?.({
-      actionCode: `ACT-${String(Date.now()).slice(-6)}`,
-      actionNumber: Date.now(),
-      userId: currentUser?.id || "",
-      userName: currentUser?.fullName || currentUser?.username || "",
-      userRole: currentUser?.role || "",
-      action: "Ghi nhận kết quả",
-      description: `Ghi nhận kết quả đào tạo ${selectedPlanForResult.planCode}, ${passedTrainees.length} người đạt`,
-      targetType: "Đào tạo",
-      targetId: selectedPlanForResult.id,
-      targetName: selectedPlanForResult.planCode,
-      timestamp: new Date().toISOString(),
+  const handleEditDocument = async (doc: TrainingDocument) => {
+    setEditingDoc(doc);
+    setDocEditForm({
+      documentName: doc.documentName,
+      documentType: doc.documentType,
+      description: doc.description || "",
+      file: null,
     });
+  };
 
-    setSelectedPlanForResult(null);
-    setResultForm({
-      attendeeResults: [],
-      attendanceFile: null,
-      certificateFile: null,
-      notes: "",
+  const handleDeleteResult = async (result: TrainingResult) => {
+    if (!window.confirm(`Xóa kết quả ${result.planCode}?`)) return;
+    try {
+      await deleteTrainingResult(result.id);
+      onResultsChange(trainingResults.filter((r) => r.id !== result.id));
+      showToast("success", "Đã xóa", "Đã xóa kết quả đào tạo");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể xóa kết quả";
+      showToast("error", "Lỗi", message);
+    }
+  };
+
+  const handleEditResult = async (result: TrainingResult) => {
+    setEditingResult(result);
+    setResultEditForm({
+      attendeeResults: result.attendees.map((a) => ({ userId: a.userId, result: a.result as "Đạt" | "Không đạt" })),
+      attendanceFile: result.attendanceFile || null,
+      certificateFile: result.certificateFile || null,
+      notes: result.notes || "",
     });
-    showToast("success", "Thành công", "Đã ghi nhận kết quả đào tạo");
+    setResultEditSelected(result.attendees.map((a) => a.userId));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setFile: (file: AttachedFile | null) => void) => {
@@ -663,6 +748,72 @@ export default function TrainingModal({
         url: URL.createObjectURL(file),
         size: file.size,
       });
+    }
+  };
+
+  const saveEditedDocument = async () => {
+    if (!editingDoc) return;
+    const payload = {
+      documentName: docEditForm.documentName,
+      documentType: docEditForm.documentType,
+      description: docEditForm.description,
+      file: docEditForm.file || editingDoc.file,
+      deviceId: editingDoc.deviceId,
+      documentCode: editingDoc.documentCode,
+      uploadedBy: editingDoc.uploadedBy,
+      uploadedAt: editingDoc.uploadedAt,
+    } as Partial<TrainingDocument>;
+    try {
+      const updated = await updateTrainingDocument(editingDoc.id, payload);
+      onDocumentsChange(trainingDocuments.map((d) => (d.id === editingDoc.id ? updated : d)));
+      setEditingDoc(null);
+      setDocEditForm({ documentName: "", documentType: "User Manual", description: "", file: null });
+      showToast("success", "Đã cập nhật", "Đã cập nhật tài liệu đào tạo");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể cập nhật tài liệu";
+      showToast("error", "Lỗi", message);
+    }
+  };
+
+  const saveEditedResult = async () => {
+    if (!editingResult) return;
+    const now = new Date().toISOString();
+    const plan = trainingPlans.find((p) => p.id === editingResult.planId);
+    const baseAttendees = plan?.trainees || editingResult.attendees;
+    const extraAttendees = resultEditSelected
+      .filter((id) => !baseAttendees.some((a) => a.userId === id))
+      .map((id) => {
+        const u = users.find((usr) => usr.id === id);
+        return {
+          userId: id,
+          fullName: u?.fullName || "",
+          employeeId: u?.employeeId || "",
+          department: u?.department || "",
+          result: (resultEditForm.attendeeResults.find((r) => r.userId === id)?.result as any) || "Đạt",
+        };
+      });
+    const attendees = [...baseAttendees, ...extraAttendees]
+      .filter((a) => resultEditSelected.includes(a.userId))
+      .map((a) => {
+        const updated = resultEditForm.attendeeResults.find((r) => r.userId === a.userId);
+        return { ...a, result: updated?.result || (a.result as "Đạt" | "Không đạt") || "Đạt", completedAt: (a as any).completedAt || now };
+      });
+    const payload: Partial<TrainingResult> = {
+      ...editingResult,
+      attendees,
+      notes: resultEditForm.notes,
+      attendanceFile: resultEditForm.attendanceFile || editingResult.attendanceFile,
+      certificateFile: resultEditForm.certificateFile || editingResult.certificateFile,
+    };
+    try {
+      const updated = await updateTrainingResult(editingResult.id, payload);
+      onResultsChange(trainingResults.map((r) => (r.id === editingResult.id ? updated : r)));
+      setEditingResult(null);
+      setResultEditForm({ attendeeResults: [], attendanceFile: null, certificateFile: null, notes: "" });
+      showToast("success", "Đã cập nhật", "Đã cập nhật kết quả đào tạo");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể cập nhật kết quả";
+      showToast("error", "Lỗi", message);
     }
   };
 
@@ -798,6 +949,20 @@ export default function TrainingModal({
           >
             <Download size={16} />
           </a>
+          <button
+            onClick={() => handleEditDocument(item)}
+            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+            title="Chỉnh sửa"
+          >
+            <Edit size={16} />
+          </button>
+          <button
+            onClick={() => handleDeleteDocument(item)}
+            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+            title="Xóa tài liệu"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       ),
     },
@@ -825,13 +990,27 @@ export default function TrainingModal({
     {
       key: "actions",
       label: "Thao tác",
-      render: () => (
+      render: (item) => (
         <div className="flex justify-center gap-2">
           <button className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Xem">
             <Eye size={16} />
           </button>
           <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="In">
             <Printer size={16} />
+          </button>
+          <button
+            onClick={() => handleEditResult(item)}
+            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+            title="Chỉnh sửa"
+          >
+            <Edit size={16} />
+          </button>
+          <button
+            onClick={() => handleDeleteResult(item)}
+            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+            title="Xóa"
+          >
+            <Trash2 size={16} />
           </button>
         </div>
       ),
@@ -1023,6 +1202,187 @@ export default function TrainingModal({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Mã kế hoạch</label>
+
+                    {editingDoc && (
+                      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" onClick={() => setEditingDoc(null)}>
+                        <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-slate-800">Chỉnh sửa tài liệu</h3>
+                            <button onClick={() => setEditingDoc(null)} className="p-2 hover:bg-slate-100 rounded-lg">
+                              <X size={18} />
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Tên tài liệu</label>
+                              <input
+                                value={docEditForm.documentName}
+                                onChange={(e) => setDocEditForm({ ...docEditForm, documentName: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Loại</label>
+                              <select
+                                value={docEditForm.documentType}
+                                onChange={(e) => setDocEditForm({ ...docEditForm, documentType: e.target.value as any })}
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                              >
+                                <option value="Slide">Slide</option>
+                                <option value="User Manual">User Manual</option>
+                                <option value="SOP">SOP</option>
+                                <option value="Chứng chỉ">Chứng chỉ</option>
+                                <option value="Khác">Khác</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
+                              <textarea
+                                value={docEditForm.description}
+                                onChange={(e) => setDocEditForm({ ...docEditForm, description: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                                rows={3}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Tệp đính kèm (tùy chọn)</label>
+                              <input type="file" accept="*/*" onChange={(e) => handleFileUpload(e, (file) => setDocEditForm({ ...docEditForm, file }))} />
+                              <p className="text-xs text-slate-500 mt-1">Tệp hiện tại: {editingDoc.file.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-2">
+                            <button onClick={() => setEditingDoc(null)} className="px-4 py-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50">Hủy</button>
+                            <button onClick={saveEditedDocument} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Lưu</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {editingResult && (
+                      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" onClick={() => setEditingResult(null)}>
+                        <div className="bg-white rounded-xl w-full max-w-2xl p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-slate-800">Chỉnh sửa kết quả</h3>
+                            <button onClick={() => setEditingResult(null)} className="p-2 hover:bg-slate-100 rounded-lg">
+                              <X size={18} />
+                            </button>
+                          </div>
+                          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+                              <p className="text-sm font-semibold text-slate-700">Thêm học viên mới</p>
+                              <input
+                                value={resultEditSearch}
+                                onChange={(e) => setResultEditSearch(e.target.value)}
+                                placeholder="Tìm theo tên hoặc mã nhân viên"
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                              />
+                              <div className="max-h-40 overflow-y-auto divide-y divide-slate-100">
+                                {users
+                                  .filter((u) => u.isActive && !resultEditSelected.includes(u.id))
+                                  .filter((u) => {
+                                    const q = resultEditSearch.toLowerCase();
+                                    return !q || u.fullName.toLowerCase().includes(q) || u.employeeId.toLowerCase().includes(q);
+                                  })
+                                  .slice(0, 8)
+                                  .map((u) => (
+                                    <button
+                                      key={u.id}
+                                      onClick={() => {
+                                        setResultEditSelected((prev) => [...prev, u.id]);
+                                        setResultEditForm((prev) =>
+                                          prev.attendeeResults.some((r) => r.userId === u.id)
+                                            ? prev
+                                            : { ...prev, attendeeResults: [...prev.attendeeResults, { userId: u.id, result: "Đạt" }] }
+                                        );
+                                      }}
+                                      className="w-full text-left px-2 py-1.5 text-sm hover:bg-white"
+                                    >
+                                      <span className="font-medium text-slate-800">{u.fullName}</span>
+                                      <span className="text-xs text-slate-500 ml-2">{u.employeeId} • {u.department}</span>
+                                    </button>
+                                  ))}
+                                {users.filter((u) => u.isActive && !resultEditSelected.includes(u.id)).length === 0 && (
+                                  <p className="text-xs text-slate-500 px-2 py-1">Không còn học viên khả dụng</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {[...(trainingPlans.find((p) => p.id === editingResult.planId)?.trainees || editingResult.attendees),
+                              ...users
+                                .filter((u) => resultEditSelected.includes(u.id))
+                                .filter((u) => !(trainingPlans.find((p) => p.id === editingResult.planId)?.trainees || editingResult.attendees).some((a) => a.userId === u.id))
+                                .map((u) => ({ userId: u.id, fullName: u.fullName, employeeId: u.employeeId, department: u.department, result: "Đạt" as const }))
+                            ].map((a) => (
+                              <div key={a.userId} className="flex items-center gap-3 border border-slate-200 rounded-lg px-3 py-2">
+                                <input
+                                  type="checkbox"
+                                  checked={resultEditSelected.includes(a.userId)}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setResultEditSelected((prev) =>
+                                      checked ? [...new Set([...prev, a.userId])] : prev.filter((id) => id !== a.userId)
+                                    );
+                                    setResultEditForm((prev) => {
+                                      const exists = prev.attendeeResults.find((r) => r.userId === a.userId);
+                                      if (checked && !exists) {
+                                        return { ...prev, attendeeResults: [...prev.attendeeResults, { userId: a.userId, result: (a.result as any) || "Đạt" }] };
+                                      }
+                                      return prev;
+                                    });
+                                  }}
+                                  className="rounded text-indigo-600"
+                                />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-slate-800">{a.fullName}</p>
+                                  <p className="text-xs text-slate-500">{a.employeeId} • {a.department}</p>
+                                </div>
+                                <select
+                                  value={resultEditForm.attendeeResults.find((r) => r.userId === a.userId)?.result || a.result}
+                                  onChange={(e) =>
+                                    setResultEditForm((prev) => ({
+                                      ...prev,
+                                      attendeeResults: prev.attendeeResults.map((r) =>
+                                        r.userId === a.userId ? { ...r, result: e.target.value as any } : r
+                                      ),
+                                    }))
+                                  }
+                                  disabled={!resultEditSelected.includes(a.userId)}
+                                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                                >
+                                  <option value="Đạt">Đạt</option>
+                                  <option value="Không đạt">Không đạt</option>
+                                </select>
+                              </div>
+                            ))}
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Ghi chú</label>
+                              <textarea
+                                value={resultEditForm.notes}
+                                onChange={(e) => setResultEditForm({ ...resultEditForm, notes: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                                rows={3}
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Biên bản điểm danh (tùy chọn)</label>
+                                <input type="file" accept="*/*" onChange={(e) => handleFileUpload(e, (file) => setResultEditForm({ ...resultEditForm, attendanceFile: file }))} />
+                                <p className="text-xs text-slate-500 mt-1">Hiện tại: {editingResult.attendanceFile?.name || "Chưa có"}</p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Chứng chỉ (tùy chọn)</label>
+                                <input type="file" accept="*/*" onChange={(e) => handleFileUpload(e, (file) => setResultEditForm({ ...resultEditForm, certificateFile: file }))} />
+                                <p className="text-xs text-slate-500 mt-1">Hiện tại: {editingResult.certificateFile?.name || "Chưa có"}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-2">
+                            <button onClick={() => setEditingResult(null)} className="px-4 py-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50">Hủy</button>
+                            <button onClick={saveEditedResult} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Lưu</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                         <input
                           type="text"
                           readOnly

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockProposals, NewDeviceProposal } from "@/lib/mockData";
+import { deleteProposal, findProposal, updateProposal } from "@/lib/device-ops-store";
 
-// In-memory store for proposals
-let proposalsStore: NewDeviceProposal[] = [...mockProposals];
+export const dynamic = "force-dynamic";
+
+async function resolveId(params: Promise<{ id: string }>) {
+  return (await params).id;
+}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const proposal = proposalsStore.find((p) => p.id === id);
+    const id = await resolveId(params);
+    const proposal = findProposal(id);
     if (!proposal) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(proposal);
   } catch (err) {
@@ -17,18 +20,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
     const body = await req.json();
-    const index = proposalsStore.findIndex((p) => p.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    const updatedProposal = {
-      ...proposalsStore[index],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
-    proposalsStore[index] = updatedProposal;
-    return NextResponse.json(updatedProposal);
+    const id = await resolveId(params);
+    const updated = updateProposal(id, body);
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(updated);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
@@ -36,11 +32,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const index = proposalsStore.findIndex((p) => p.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    proposalsStore = proposalsStore.filter((p) => p.id !== id);
+    const id = await resolveId(params);
+    const deleted = deleteProposal(id);
+    if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

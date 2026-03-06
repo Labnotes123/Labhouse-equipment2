@@ -71,7 +71,7 @@ function persist(store: DeviceStore) {
 }
 
 function getStore(): DeviceStore {
-  const globalAny = globalThis as Record<string, DeviceStore | undefined>;
+  const globalAny = globalThis as unknown as Record<string, DeviceStore | undefined>;
   if (!globalAny[STORE_KEY]) {
     globalAny[STORE_KEY] = loadFromDisk();
   }

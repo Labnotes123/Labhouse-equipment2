@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockCalibrationResults, CalibrationResult } from "@/lib/mockData";
+import { deleteCalibrationResult, findCalibrationResult, updateCalibrationResult } from "@/lib/device-ops-store";
 
-// In-memory store for calibration results
-let calibrationResultsStore: CalibrationResult[] = [...mockCalibrationResults];
+export const dynamic = "force-dynamic";
+
+async function resolveId(params: Promise<{ id: string }>) {
+  return (await params).id;
+}
+
+function validateCalibrationResult(body: any) {
+  if (!body?.deviceId) return "deviceId is required";
+  return null;
+}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const result = calibrationResultsStore.find((r) => r.id === id);
+    const id = await resolveId(params);
+    const result = findCalibrationResult(id);
     if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(result);
   } catch (err) {
@@ -17,17 +25,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
     const body = await req.json();
-    const index = calibrationResultsStore.findIndex((r) => r.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const error = validateCalibrationResult(body);
+    if (error) return NextResponse.json({ error }, { status: 400 });
 
-    const updatedResult = {
-      ...calibrationResultsStore[index],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
-    calibrationResultsStore[index] = updatedResult;
+    const id = await resolveId(params);
+    const updatedResult = updateCalibrationResult(id, body);
+    if (!updatedResult) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(updatedResult);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -36,11 +40,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const index = calibrationResultsStore.findIndex((r) => r.id === id);
-    if (index === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const id = await resolveId(params);
+    const deleted = deleteCalibrationResult(id);
+    if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    calibrationResultsStore = calibrationResultsStore.filter((r) => r.id !== id);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

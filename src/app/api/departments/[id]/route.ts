@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteSupplier, findSupplier, updateSupplier } from "@/lib/admin-store";
+import { deleteDepartment, findDepartment, updateDepartment } from "@/lib/admin-store";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const supplier = findSupplier(id);
-    if (!supplier) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(supplier);
+    const department = findDepartment(id);
+    if (!department) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(department);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
@@ -16,9 +16,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const body = await req.json();
-    const updatedSupplier = updateSupplier(id, body);
-    if (!updatedSupplier) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(updatedSupplier);
+    const updated = updateDepartment(id, body);
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(updated);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const removed = deleteSupplier(id);
+    const removed = deleteDepartment(id);
     if (!removed) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {

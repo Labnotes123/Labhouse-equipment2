@@ -54,9 +54,14 @@ async function createNotification(payload: {
   }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function resolveId(params: Promise<{ id: string }>) {
+  return (await params).id;
+}
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const incident = findIncident(params.id);
+    const id = await resolveId(params);
+    const incident = findIncident(id);
     if (!incident) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(incident);
   } catch (err) {
@@ -64,7 +69,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const body = await req.json();
     const error = validateIncident(body);
@@ -114,7 +119,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       };
     }
 
-    const updatedIncident = updateIncident(params.id, updates);
+    const id = await resolveId(params);
+    const updatedIncident = updateIncident(id, updates);
     if (!updatedIncident) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     if (action === "approve" && updatedIncident.reportedBy) {
@@ -147,9 +153,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const deleted = deleteIncident(params.id);
+    const id = await resolveId(params);
+    const deleted = deleteIncident(id);
     if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     return NextResponse.json({ success: true });

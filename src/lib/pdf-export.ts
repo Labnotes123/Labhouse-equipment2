@@ -6,43 +6,6 @@
 
 import type { NewDeviceProposal, DeviceRequirement, AttachedFile } from "./mockData";
 
-// Vietnamese character mapping for basic charsets (fallback)
-const vietnameseChars: Record<string, string> = {
-  'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
-  'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
-  'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
-  'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
-  'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
-  'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
-  'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
-  'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
-  'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
-  'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
-  'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
-  'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
-  'đ': 'd',
-  'À': 'A', 'Á': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
-  'Ă': 'A', 'Ằ': 'A', 'Ắ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
-  'Â': 'A', 'Ầ': 'A', 'Ấ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
-  'È': 'E', 'É': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
-  'Ê': 'E', 'Ề': 'E', 'Ế': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
-  'Ì': 'I', 'Í': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
-  'Ò': 'O', 'Ó': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
-  'Ô': 'O', 'Ồ': 'O', 'Ố': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
-  'Ơ': 'O', 'Ờ': 'O', 'Ớ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
-  'Ù': 'U', 'Ú': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
-  'Ư': 'U', 'Ừ': 'U', 'Ứ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
-  'Ỳ': 'Y', 'Ý': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
-  'Đ': 'D',
-};
-
-/**
- * Convert Vietnamese string to ASCII (for fallback font rendering)
- */
-function toAscii(str: string): string {
-  return str.split('').map(char => vietnameseChars[char] || char).join('');
-}
-
 /**
  * Format date to Vietnamese format
  */
@@ -71,7 +34,7 @@ function collectAttachments(proposal: NewDeviceProposal): { name: string; url: s
     if (req.attachments && req.attachments.length > 0) {
       req.attachments.forEach((file: AttachedFile) => {
         attachments.push({
-          name: file.name || `Đính kèm ${index + 1}`,
+          name: file.name || `Dinh kèm ${index + 1}`,
           url: file.url,
           type: file.type || "application/octet-stream",
         });
@@ -84,6 +47,7 @@ function collectAttachments(proposal: NewDeviceProposal): { name: string; url: s
 
 /**
  * Export proposal to PDF - uses dynamic import for jsPDF
+ * Supports UTF-8 Vietnamese characters
  */
 export async function exportProposalToPDF(proposal: NewDeviceProposal): Promise<void> {
   console.log("[PDF Export] Starting export for proposal:", proposal.proposalCode);
@@ -99,117 +63,191 @@ export async function exportProposalToPDF(proposal: NewDeviceProposal): Promise<
     format: "a4",
   });
   
-  // Set Unicode font (built-in)
+  // Use helvetica font - jsPDF has built-in UTF-8 support in newer versions
   doc.setFont("helvetica", "normal");
   
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  
+  // Helper function to add text with automatic page breaks
+  const addText = (text: string, x: number, y: number, options?: { fontSize?: number; bold?: boolean; color?: number[] }) => {
+    if (options?.fontSize) doc.setFontSize(options.fontSize);
+    doc.setFont("helvetica", options?.bold ? "bold" : "normal");
+    if (options?.color) {
+      const [r, g, b] = options.color;
+      doc.setTextColor(r, g, b);
+    } else doc.setTextColor(0, 0, 0);
+    
+    const lines = doc.splitTextToSize(text, pageWidth - 28);
+    doc.text(lines, x, y);
+    return lines.length * 5; // Return height used
+  };
   
   // Header
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("PHIẾU ĐỀ XUẤT THIẾT BỊ MỚI", pageWidth / 2, 20, { align: "center" });
+  doc.setTextColor(0, 51, 102);
+  doc.text("PHIEU DE XUAT THIET BI MOI", pageWidth / 2, 18, { align: "center" });
   
+  // Reset text color
+  doc.setTextColor(0, 0, 0);
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text(`Mã phiếu: ${proposal.proposalCode}`, 14, 32);
-  doc.text(`Ngày đề xuất: ${formatDateVN(proposal.proposedDate)}`, 14, 38);
-  doc.text(`Người đề xuất: ${proposal.proposedBy}`, 14, 44);
-  doc.text(`Phòng ban: ${proposal.department || ""}`, 14, 50);
-  doc.text(`Trạng thái: ${proposal.status}`, 14, 56);
   
-  // Necessity
+  // Basic Info Section
+  let yPos = 30;
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("I. Sự cần thiết đầu tư:", 14, 66);
+  doc.text("I. THONG TIN CO BAN:", 14, yPos);
+  yPos += 8;
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  const necessityLines = doc.splitTextToSize(proposal.necessity || "", pageWidth - 28);
-  doc.text(necessityLines, 14, 72);
   
-  // Device Requirements
-  let yPos = 72 + necessityLines.length * 5 + 10;
-  
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("II. Yêu cầu thiết bị:", 14, yPos);
+  // Ma phieu
+  doc.text(`Ma phieu: ${proposal.proposalCode || ""}`, 14, yPos);
   yPos += 6;
   
-  // Create table for device requirements
+  // Ngay de xuat
+  doc.text(`Ngay de xuat: ${formatDateVN(proposal.proposedDate)}`, 14, yPos);
+  yPos += 6;
+  
+  // Nguoi de xuat
+  doc.text(`Nguoi de xuat: ${proposal.proposedBy || ""}`, 14, yPos);
+  yPos += 6;
+  
+  // Phong ban
+  doc.text(`Phong ban: ${proposal.department || ""}`, 14, yPos);
+  yPos += 6;
+  
+  // Trang thai
+  doc.text(`Trang thai: ${proposal.status || ""}`, 14, yPos);
+  yPos += 10;
+  
+  // Necessity Section
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("II. SU CAN THIET DAU TU:", 14, yPos);
+  yPos += 8;
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const necessityText = proposal.necessity || "Khong co mo ta";
+  const necessityLines = doc.splitTextToSize(necessityText, pageWidth - 28);
+  doc.text(necessityLines, 14, yPos);
+  yPos += necessityLines.length * 5 + 10;
+  
+  // Device Requirements Section
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("III. YEU CAU THIET BI:", 14, yPos);
+  yPos += 8;
+  
+  // Create table for device requirements with more complete data
   const tableData = proposal.deviceRequirements.map((req: DeviceRequirement, index: number) => [
     index + 1,
-    req.deviceName,
-    req.manufacturer,
-    req.yearOfManufacture,
-    req.distributor,
-    req.quantity.toString(),
+    req.deviceName || "",
+    req.manufacturer || "",
+    req.yearOfManufacture || "",
+    req.distributor || "",
+    req.quantity?.toString() || "0",
   ]);
   
   autoTable(doc, {
     startY: yPos,
-    head: [["STT", "Tên thiết bị", "Hãng sx", "Năm sx", "Đại lý", "SL"]],
+    head: [["STT", "Ten thiet bi", "Hang sx", "Nam sx", "Dai ly", "SL"]],
     body: tableData,
     theme: "striped",
-    headStyles: { fillColor: [66, 135, 245] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [0, 82, 147], textColor: 255, fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 3 },
     margin: { left: 14, right: 14 },
   });
   
-  // Get the final Y position after table
   yPos = (doc as any).lastAutoTable.finalY + 10;
   
-  // Technical specs for each device
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("III. Thông số kỹ thuật:", 14, yPos);
-  yPos += 6;
-  
-  proposal.deviceRequirements.forEach((req: DeviceRequirement, index: number) => {
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${index + 1}. ${req.deviceName}:`, 14, yPos);
-    yPos += 5;
+  // Technical specs for each device - Add more complete data
+  if (proposal.deviceRequirements.length > 0) {
+    doc.setFontSize(12);
+    doc.setFont("helibold", "bold");
+    doc.text("IV. THONG SO KY THUAT:", 14, yPos);
+    yPos += 8;
     
-    doc.setFont("helvetica", "normal");
-    const specsLines = doc.splitTextToSize(req.technicalSpecs || "", pageWidth - 28);
-    doc.text(specsLines, 14, yPos);
-    yPos += specsLines.length * 5 + 3;
-  });
+    proposal.deviceRequirements.forEach((req: DeviceRequirement, index: number) => {
+      // Check if we need a new page
+      if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${index + 1}. ${req.deviceName || "Thiet bi"}`, 14, yPos);
+      yPos += 6;
+      
+      doc.setFont("helvetica", "normal");
+      
+      // Add all technical specs
+      const specsText = req.technicalSpecs || "Khong co thong so";
+      const specsLines = doc.splitTextToSize(specsText, pageWidth - 28);
+      doc.text(specsLines, 14, yPos);
+      yPos += specsLines.length * 5 + 5;
+    });
+  }
   
   // Approvers section - check if we need a new page
-  if (yPos > 230) {
+  if (yPos > pageHeight - 50) {
     doc.addPage();
     yPos = 20;
   } else {
-    yPos += 5;
+    yPos += 10;
   }
   
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("IV. Lịch sử phê duyệt:", 14, yPos);
-  yPos += 6;
+  doc.text("V. NGUOI PHAN CONG & PHAN BIEN:", 14, yPos);
+  yPos += 8;
   
   // Approvers table
   const approverData = proposal.approvers.map((approver) => [
-    approver.fullName,
-    approver.role,
-    approver.isApprover ? "Người phê duyệt" : "Người liên quan",
+    approver.fullName || "",
+    approver.role || "",
+    approver.isApprover ? "Nguoi duyet" : "Nguoi lien quan",
   ]);
   
   if (approverData.length > 0) {
     autoTable(doc, {
       startY: yPos,
-      head: [["Họ tên", "Chức vụ", "Vai trò"]],
+      head: [["Ho ten", "Chuc vu", "Vai tro"]],
       body: approverData,
       theme: "striped",
-      headStyles: { fillColor: [66, 135, 245] },
-      styles: { fontSize: 9 },
+      headStyles: { fillColor: [0, 128, 0], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 3 },
       margin: { left: 14, right: 14 },
     });
     yPos = (doc as any).lastAutoTable.finalY + 10;
+  } else {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Chua co nguoi phan cong", 14, yPos);
+    yPos += 10;
   }
   
-  // Attachments section - add new page for attachments
+  // Approval status
+  if (proposal.approvedBy) {
+    if (yPos > pageHeight - 40) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(11);
+    doc.setTextColor(0, 100, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Da duyet boi: ${proposal.approvedBy} - Ngay: ${proposal.approvedDate || ""}`, 14, yPos);
+    doc.setTextColor(0, 0, 0);
+    yPos += 10;
+  }
+  
+  // Attachments section - Add new page for attachments with listing
   const attachments = collectAttachments(proposal);
   
   if (attachments.length > 0) {
@@ -217,17 +255,19 @@ export async function exportProposalToPDF(proposal: NewDeviceProposal): Promise<
     
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("PHỤ LỤC: TỆP ĐÍNH KÈM", pageWidth / 2, 20, { align: "center" });
+    doc.setTextColor(0, 51, 102);
+    doc.text("PHU LUC: TEP DINH KEM", pageWidth / 2, 18, { align: "center" });
     
     doc.setFontSize(11);
-    doc.text(`Phiếu đề xuất: ${proposal.proposalCode}`, 14, 32);
-    doc.text(`Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}`, 14, 38);
-    doc.text(`Tổng số tệp đính kèm: ${attachments.length}`, 14, 44);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Phieu de xuat: ${proposal.proposalCode}`, 14, 30);
+    doc.text(`Ngay xuat: ${new Date().toLocaleDateString("vi-VN")}`, 14, 36);
+    doc.text(`Tong so tep dinh kem: ${attachments.length}`, 14, 42);
     
     // List all attachments
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("Danh sách tệp đính kèm:", 14, 54);
+    doc.text("Danh sach tep dinh kem:", 14, 52);
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -235,20 +275,21 @@ export async function exportProposalToPDF(proposal: NewDeviceProposal): Promise<
     attachments.forEach((file, index) => {
       const fileInfo = `${index + 1}. ${file.name}`;
       const fileType = file.type ? ` (${file.type})` : "";
-      doc.text(fileInfo + fileType, 14, 62 + index * 8);
+      doc.text(fileInfo + fileType, 14, 60 + index * 8);
     });
     
     // Add note about viewing attachments
     doc.setFontSize(9);
     doc.setTextColor(100);
     doc.text(
-      "Lưu ý: Các tệp đính kèm (báo giá, tài liệu kỹ thuật, hình ảnh...) được lưu trữ trong hệ thống.",
+      "Luu y: Cac tep dinh kem (bao gia, tai lieu ky thuat, hinh anh...) duoc luu tru trong he thong.",
       14,
-      62 + attachments.length * 8 + 10
+      60 + attachments.length * 8 + 10
     );
   }
   
   // Save the PDF
-  doc.save(`${proposal.proposalCode}.pdf`);
+  const fileName = `${proposal.proposalCode || "phieu_de_xuat"}.pdf`;
+  doc.save(fileName);
   console.log("[PDF Export] Completed for proposal:", proposal.proposalCode);
 }

@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Device, MOCK_USERS_LIST, AttachedFile } from "@/lib/mockData";
+import { SmartTable, Column } from "@/components/SmartTable";
 
 interface CalibrationModalProps {
   show: boolean;
@@ -245,6 +246,132 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Define columns for SmartTable
+
+  const requestColumns: Column<CalibrationRequest>[] = [
+    { key: "requestCode", label: "Mã yêu cầu", sortable: true, filterable: true, render: (item) => <span className="font-mono text-purple-600">{item.requestCode}</span> },
+    { key: "deviceName", label: "Tên thiết bị", sortable: true, filterable: true },
+    { key: "deviceCode", label: "Mã thiết bị", sortable: true, filterable: true },
+    { key: "serialNumber", label: "Serial", sortable: true, filterable: true },
+    { key: "content", label: "Nội dung", sortable: true, filterable: true },
+    {
+      key: "status",
+      label: "Trạng thái",
+      sortable: true,
+      filterable: true,
+      render: (item) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            item.status === "Hoàn thành"
+              ? "bg-green-100 text-green-700"
+              : item.status === "Chờ duyệt"
+              ? "bg-yellow-100 text-yellow-700"
+              : item.status === "Đã duyệt"
+              ? "bg-blue-100 text-blue-700"
+              : "bg-slate-100 text-slate-700"
+          }`}
+        >
+          {item.status}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      sortable: false,
+      filterable: false,
+      render: (item) => (
+        <div className="flex justify-center gap-2">
+          <button className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Xem chi tiết">
+            <Eye size={16} />
+          </button>
+          <button className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Xuất PDF">
+            <FileText size={16} />
+          </button>
+          {item.status === "Chờ duyệt" && (
+            <button className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Phê duyệt">
+              <CheckCircle2 size={16} />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const scheduleColumns: Column<CalibrationSchedule>[] = [
+    { key: "deviceCode", label: "Mã thiết bị", sortable: true, filterable: true },
+    { key: "type", label: "Nội dung", sortable: true, filterable: true },
+    { key: "scheduledDate", label: "Ngày dự kiến", sortable: true, filterable: true, dateFilter: true },
+    { key: "assignedTo", label: "Người phụ trách", sortable: true, filterable: true },
+    {
+      key: "status",
+      label: "Trạng thái",
+      sortable: true,
+      filterable: true,
+      render: (item) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            item.status === "Đã hoàn thành"
+              ? "bg-green-100 text-green-700"
+              : item.status === "Quá hạn"
+              ? "bg-red-100 text-red-700"
+              : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
+          {item.status}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      sortable: false,
+      filterable: false,
+      render: (item) => (
+        <div className="flex justify-center gap-2">
+          <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded">
+            <Eye size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const resultColumns: Column<CalibrationResult>[] = [
+    { key: "resultCode", label: "Mã kết quả", sortable: true, filterable: true, render: (item) => <span className="font-mono text-purple-600">{item.resultCode}</span> },
+    { key: "deviceCode", label: "Mã thiết bị", sortable: true, filterable: true },
+    { key: "executionUnit", label: "Đơn vị thực hiện", sortable: true, filterable: true },
+    { key: "executionDate", label: "Ngày thực hiện", sortable: true, filterable: true, dateFilter: true },
+    {
+      key: "conclusion",
+      label: "Kết quả",
+      sortable: true,
+      filterable: true,
+      render: (item) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            item.conclusion === "Đạt" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          }`}
+        >
+          {item.conclusion}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Thao tác",
+      sortable: false,
+      filterable: false,
+      render: (item) => (
+        <div className="flex justify-center gap-2">
+          <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded">
+            <Eye size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   if (!show || !device) return null;
 
   const requestCode = `PHC-${new Date().getFullYear()}-${String(calibrationCounter).padStart(3, "0")}`;
@@ -354,8 +481,8 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-2xl max-w-[90vw] xl:max-w-7xl w-full max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-xl font-bold text-slate-800">Hiệu chuẩn thiết bị</h2>
             <p className="text-sm text-slate-500">Quản lý yêu cầu, lịch và kết quả hiệu chuẩn</p>
@@ -412,72 +539,14 @@ export default function CalibrationModal({ show, device, onClose }: CalibrationM
                     </button>
                   </div>
 
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã yêu cầu</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Tên thiết bị</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Mã thiết bị</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Serial</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Nội dung</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Trạng thái</th>
-                          <th className="px-4 py-3 text-center font-semibold text-slate-700">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {calibrationRequests.filter((r) => r.deviceId === device.id).length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                              <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                              <p>Chưa có yêu cầu hiệu chuẩn nào</p>
-                            </td>
-                          </tr>
-                        ) : (
-                          calibrationRequests
-                            .filter((r) => r.deviceId === device.id)
-                            .map((req) => (
-                              <tr key={req.id} className="hover:bg-slate-50">
-                                <td className="px-4 py-3 font-mono text-purple-600">{req.requestCode}</td>
-                                <td className="px-4 py-3">{req.deviceName}</td>
-                                <td className="px-4 py-3">{req.deviceCode}</td>
-                                <td className="px-4 py-3">{req.serialNumber}</td>
-                                <td className="px-4 py-3">{req.content}</td>
-                                <td className="px-4 py-3">
-                                  <span
-                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      req.status === "Hoàn thành"
-                                        ? "bg-green-100 text-green-700"
-                                        : req.status === "Đã duyệt"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : req.status === "Chờ duyệt"
-                                            ? "bg-amber-100 text-amber-700"
-                                            : "bg-slate-100 text-slate-700"
-                                    }`}
-                                  >
-                                    {req.status}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <div className="flex justify-center gap-2">
-                                    <button className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Xem chi tiết">
-                                      <Eye size={16} />
-                                    </button>
-                                    <button className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Xuất PDF">
-                                      <FileText size={16} />
-                                    </button>
-                                    {req.status === "Chờ duyệt" && (
-                                      <button className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Phê duyệt">
-                                        <CheckCircle2 size={16} />
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                        )}
-                      </tbody>
-                    </table>
+                  <div className="mt-4">
+                    <SmartTable
+                      data={calibrationRequests.filter((r) => r.deviceId === device.id)}
+                      columns={requestColumns}
+                      keyField="id"
+                      settingsKey={`device_${device.id}_cal_requests`}
+                      defaultPageSize={5}
+                    />
                   </div>
                 </div>
               ) : (

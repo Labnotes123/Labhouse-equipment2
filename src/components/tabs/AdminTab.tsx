@@ -321,12 +321,13 @@ export default function AdminTab() {
         </button>
         {expanded && (
           <div className="px-3 pb-3 border-t border-slate-100">
-            <div className="grid grid-cols-2 gap-3 mt-2">
+            <div className="grid grid-cols-3 gap-3 mt-2">
               {functionPerms.length > 0 && (
-                <div className="space-y-1">
+                <div className="col-span-2 space-y-1">
                   <h6 className={`text-[10px] font-bold uppercase ${colors.text} flex items-center gap-1`}>
                     <CheckSquare size={10} /> Chức năng
                   </h6>
+                  <div className="grid grid-cols-2 gap-x-4">
                   {functionPerms.map(perm => (
                     <label key={perm.id} className="flex items-start gap-1.5 cursor-pointer p-1 rounded hover:bg-slate-50">
                       <input
@@ -338,6 +339,7 @@ export default function AdminTab() {
                       <span className="text-[10px] text-slate-600">{perm.name}</span>
                     </label>
                   ))}
+                  </div>
                 </div>
               )}
               {filePerms.length > 0 && (
@@ -1736,9 +1738,9 @@ export default function AdminTab() {
       {/* Profile Modal */}
       {showProfileModal && editingProfile && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-6xl shadow-2xl transform transition-all">
+          <div className="bg-white rounded-3xl w-full max-w-[95vw] xl:max-w-[1400px] shadow-2xl transform transition-all max-h-[95vh] flex flex-col">
             {/* Header with gradient */}
-            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-blue-600 to-indigo-600">
+            <div className="relative px-6 py-5 rounded-t-3xl bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -1757,7 +1759,7 @@ export default function AdminTab() {
               </div>
             </div>
             {/* Content */}
-            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto">
               {editingProfile.id && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-600 mb-1">ID Profile</label>
@@ -1792,7 +1794,7 @@ export default function AdminTab() {
               {/* Detailed Permission Matrix */}
               <div>
                 <label className="block text-sm font-semibold text-slate-600 mb-3">Ma trận phân quyền</label>
-                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+                <div className="space-y-3">
                   {/* MODULE 1: QUẢN LÝ CHUNG */}
                   <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                     <button
@@ -1821,12 +1823,13 @@ export default function AdminTab() {
                     </button>
                     {expandedModules.has('dashboard') && (
                       <div className="p-4 border-t border-slate-100">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                           {/* Function Permissions */}
-                          <div className="space-y-2">
+                          <div className="col-span-2 space-y-2">
                             <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-1">
                               <CheckSquare size={12} /> Quyền Chức năng
                             </h5>
+                            <div className="grid grid-cols-2 gap-x-4">
                             {getDetailedPermissions('dashboard', 'function').map(perm => (
                               <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                                 <input
@@ -1841,6 +1844,7 @@ export default function AdminTab() {
                                 </div>
                               </label>
                             ))}
+                            </div>
                           </div>
                           {/* File Permissions */}
                           <div className="space-y-2">
@@ -1894,11 +1898,12 @@ export default function AdminTab() {
                     </button>
                     {expandedModules.has('new_device') && (
                       <div className="p-4 border-t border-slate-100">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="col-span-2 space-y-2">
                             <h5 className="text-xs font-bold text-green-600 uppercase mb-2 flex items-center gap-1">
                               <CheckSquare size={12} /> Quyền Chức năng
                             </h5>
+                            <div className="grid grid-cols-2 gap-x-4">
                             {getDetailedPermissions('new_device', 'function').map(perm => (
                               <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                                 <input
@@ -1913,6 +1918,7 @@ export default function AdminTab() {
                                 </div>
                               </label>
                             ))}
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <h5 className="text-xs font-bold text-purple-600 uppercase mb-2 flex items-center gap-1">
@@ -2045,11 +2051,12 @@ export default function AdminTab() {
                     </button>
                     {expandedModules.has('admin') && (
                       <div className="p-4 border-t border-slate-100">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="col-span-2 space-y-2">
                             <h5 className="text-xs font-bold text-purple-600 uppercase mb-2 flex items-center gap-1">
                               <CheckSquare size={12} /> Quyền Chức năng
                             </h5>
+                            <div className="grid grid-cols-2 gap-x-4">
                             {getDetailedPermissions('admin', 'function').map(perm => (
                               <label key={perm.id} className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                                 <input
@@ -2064,6 +2071,7 @@ export default function AdminTab() {
                                 </div>
                               </label>
                             ))}
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <h5 className="text-xs font-bold text-rose-600 uppercase mb-2 flex items-center gap-1">
@@ -2141,7 +2149,7 @@ export default function AdminTab() {
                 </div>
               </div>
             </div>
-            <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 flex-shrink-0">
               <button
                 onClick={() => { setShowProfileModal(false); setEditingProfile(null); }}
                 className="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-200 transition-colors"

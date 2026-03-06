@@ -525,8 +525,8 @@ export default function IncidentReportModal({
                   <SmartTable<IncidentReport>
                     data={deviceIncidents}
                     keyField="id"
-                    defaultPageSize={10}
-                    pageSizeOptions={[5, 10, 15, 20]}
+                    defaultPageSize={20}
+                    pageSizeOptions={[10, 20, 30, 40]}
                     settingsKey={`incident_reports_${device.id}`}
                     onExport={(data) => {
                       downloadCsvFile(
@@ -1146,8 +1146,8 @@ export default function IncidentReportModal({
               <SmartTable<WorkOrder & { incidentReportCode: string }>
                 data={allDeviceWorkOrders}
                 keyField="id"
-                defaultPageSize={10}
-                pageSizeOptions={[5, 10, 15, 20]}
+                defaultPageSize={20}
+                pageSizeOptions={[10, 20, 30, 40]}
                 settingsKey={`work_orders_${device.id}`}
                 onExport={(data) => {
                   downloadCsvFile(

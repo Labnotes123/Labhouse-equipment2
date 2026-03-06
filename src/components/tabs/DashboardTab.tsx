@@ -377,7 +377,11 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
   };
 
   // Export to Excel
-  const handleExport = () => {
+  const handleExport = async () => {
+    if (filteredApprovals.length === 0) {
+      showError("Khong co du lieu de xuat Excel");
+      return;
+    }
     try {
       // Prepare data for export
       const headers = ["Mã phiếu", "Loại", "Tên thiết bị", "Người yêu cầu", "Ngày yêu cầu", "Trạng thái"];
@@ -443,24 +447,24 @@ export default function DashboardTab({ onNavigateNewDevicePending }: { onNavigat
       {/* PHẦN 1: KHU VỰC CẢNH BÁO & PHÊ DUYỆT TỔNG HỢP */}
       
       {/* 1.1. Alert Widget Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {stats.map((stat, i) => (
           <button
             key={i}
             onClick={() => setActiveFilter(stat.filter)}
-            className={`relative overflow-hidden bg-white rounded-2xl p-5 shadow-sm border transition-all hover:-translate-y-1 hover:shadow-md ${
+            className={`relative overflow-hidden bg-white rounded-xl p-4 shadow-sm border transition-all hover:-translate-y-1 hover:shadow-md ${
               activeFilter === stat.filter 
                 ? "border-blue-300 ring-2 ring-blue-100" 
                 : "border-slate-100"
             }`}
           >
-            <div className={`absolute top-0 right-0 w-24 h-24 rounded-full opacity-10 -translate-y-1/2 translate-x-1/2 bg-gradient-to-br ${stat.color}`} />
+            <div className={`absolute top-0 right-0 w-16 h-16 rounded-full opacity-10 -translate-y-1/2 translate-x-1/2 bg-gradient-to-br ${stat.color}`} />
             <div className="relative">
-              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3 shadow-lg`}>
+              <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center mb-2 shadow-md`}>
                 <span className="text-white">{stat.icon}</span>
               </div>
-              <p className="text-3xl font-bold text-slate-800">{stat.value}</p>
-              <p className="text-sm text-slate-500 mt-1">{stat.label}</p>
+              <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+              <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{stat.label}</p>
             </div>
           </button>
         ))}

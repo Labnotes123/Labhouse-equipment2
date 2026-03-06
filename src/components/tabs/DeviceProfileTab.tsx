@@ -136,8 +136,10 @@ export interface TransferProposal {
   deviceName: string;
   fromLocation: string;
   toLocation: string;
+  recipient?: string;
   reason: string;
   plannedTransferDate: string;
+  returnDate?: string;
   requestedBy: string;
   approver: string;
   status: WorkflowStatus;

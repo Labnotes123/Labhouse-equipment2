@@ -446,6 +446,18 @@ export default function DeviceProfileTab() {
   const [deviceDetailSubTab, setDeviceDetailSubTab] = useState<"info" | "incidents" | "calibration">("info");
   const [showAddForm, setShowAddForm] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-action-menu-wrapper]')) {
+        setShowActionMenu(null);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
   
   // Table specific states
   const [columns, setColumns] = useState<Column[]>(defaultColumns);
@@ -2238,7 +2250,7 @@ export default function DeviceProfileTab() {
                           )
                         ))}
                         <td className="px-4 py-3">
-                          <div className="relative">
+                          <div className="relative" data-action-menu-wrapper>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
